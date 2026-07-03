@@ -3,27 +3,41 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f0f4f0; --card: #ffffff; --card-alt: #f7f9f7;
-  --accent: #4CAF82; --accent-light: #e8f5ee;
-  --blue: #5B8DEF; --blue-light: #EEF3FD;
-  --coral: #F47B7B; --coral-light: #FEF0F0;
-  --amber: #F5A623; --amber-light: #FEF9EE;
-  --text: #1a1a2e; --text-med: #4a5568; --text-light: #94a3b8;
-  --border: #e8eef0;
-  --shadow: 0 4px 24px rgba(0,0,0,0.06);
-  --shadow-hover: 0 8px 32px rgba(0,0,0,0.10);
+  /* Default: Soft Minimalist (Light) */
+  --bg: #f8fafc; --card: #ffffff; --card-alt: #f1f5f9;
+  --accent: #6366f1; --accent-light: #eef2ff;
+  --blue: #3b82f6; --blue-light: #eff6ff;
+  --coral: #ef4444; --coral-light: #fef2f2;
+  --amber: #f59e0b; --amber-light: #fffbeb;
+  --text: #0f172a; --text-med: #475569; --text-light: #94a3b8;
+  --border: #e2e8f0; --radius: 20px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --glass-bg: #ffffff; --glass-blur: 0px;
 }
 
-.dark-mode {
-  --bg: #0f172a; --card: #1e293b; --card-alt: #334155;
-  --accent: #4CAF82; --accent-light: #064e3b;
-  --blue: #3b82f6; --blue-light: #1e3a8a;
-  --coral: #ef4444; --coral-light: #7f1d1d;
-  --amber: #f59e0b; --amber-light: #78350f;
-  --text: #f8fafc; --text-med: #cbd5e1; --text-light: #94a3b8;
-  --border: #334155;
-  --shadow: 0 4px 24px rgba(0,0,0,0.3);
-  --shadow-hover: 0 8px 32px rgba(0,0,0,0.4);
+.theme-bento {
+  --bg: #f3f4f6; --card: #ffffff; --card-alt: #f9fafb;
+  --radius: 12px; --border: #e5e7eb;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --accent: #10b981; --accent-light: #ecfdf5;
+}
+
+.theme-glass {
+  --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --card: rgba(255, 255, 255, 0.7);
+  --card-alt: rgba(255, 255, 255, 0.4);
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-blur: 12px;
+  --text: #1e1b4b; --border: rgba(255, 255, 255, 0.3);
+  --radius: 24px; --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.theme-command {
+  --bg: #020617; --card: #0f172a; --card-alt: #1e293b;
+  --text: #f8fafc; --text-med: #94a3b8; --border: #334155;
+  --accent: #22c55e; --accent-light: rgba(34, 197, 94, 0.1);
+  --radius: 8px; --shadow: 0 0 20px rgba(0,0,0,0.5);
+  --blue: #38bdf8;
 }
 
 body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }

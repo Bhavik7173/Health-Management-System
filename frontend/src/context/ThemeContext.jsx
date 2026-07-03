@@ -3,23 +3,25 @@ import { createContext, useContext, useState, useEffect } from "react";
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("mc_dark_mode") === "true";
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("mc_theme") || "minimalist";
   });
 
   useEffect(() => {
-    localStorage.setItem("mc_dark_mode", darkMode);
-    if (darkMode) {
-      document.documentElement.classList.add("dark-mode");
-    } else {
-      document.documentElement.classList.remove("dark-mode");
-    }
-  }, [darkMode]);
+    localStorage.setItem("mc_theme", theme);
+    // Remove all theme classes first
+    document.documentElement.classList.remove("theme-bento", "theme-glass", "theme-command");
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+    // Add new theme class (minimalist is default, no class needed)
+    if (theme !== "minimalist") {
+      document.documentElement.classList.add(`theme-${theme}`);
+    }
+  }, [theme]);
+
+  const toggleTheme = (newTheme) => setTheme(newTheme);
 
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -7,11 +7,17 @@ import { authService } from "../services/api";
 import MfaSetup from "../components/MfaSetup";
 
 export default function SettingsPage() {
-  const { user, token } = useAuth();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [showMfa, setShowMfa] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [msg, setLoadingMsg] = useState("");
+
+  const themeOptions = [
+    { id: "minimalist", name: "Soft Minimalist", color: "#6366f1", icon: "🌈", desc: "Clean & Trustworthy" },
+    { id: "bento", name: "Modern Bento", color: "#10b981", icon: "🍱", desc: "Organized & Efficient" },
+    { id: "glass", name: "AI Glass", color: "#764ba2", icon: "✨", desc: "Futuristic & Premium" },
+    { id: "command", name: "Command Center", color: "#22c55e", icon: "📟", desc: "High-Performance Dark" },
+  ];
 
   const [pwd, setPwd] = useState({ current:"", new:"", confirm:"" });
 
@@ -32,7 +38,7 @@ export default function SettingsPage() {
 
   return (
     <div className="page-enter">
-      <PageHeader title="⚙️ Settings" subtitle="Manage your profile, security, and preferences" />
+      <PageHeader title="⚙️ Settings & Customization" subtitle="Manage clinical security and application design" />
 
       <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:24 }}>
         {/* Sidebar Nav */}
@@ -56,29 +62,31 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-          {/* Preferences */}
+          {/* Theme Gallery */}
           <Card>
-            <h3 style={{ fontSize:16, marginBottom:20, color:C.text }}>Appearance</h3>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <div style={{ fontWeight:700, color:C.text }}>Dark Mode</div>
-                <div style={{ fontSize:12, color:C.textLight }}>Switch between light and dark themes</div>
-              </div>
-              <button onClick={toggleDarkMode} style={{
-                width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
-                background: darkMode ? C.accent : C.border, position:"relative", transition:"background 0.2s"
-              }}>
-                <div style={{
-                  width:20, height:20, borderRadius:"50%", background:"#fff",
-                  position:"absolute", top:3, left: darkMode ? 25 : 3, transition:"left 0.2s"
-                }}/>
-              </button>
+            <h3 style={{ fontSize:16, fontWeight:800, marginBottom:20, color:C.text }}>Application Design</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(2, 1fr)", gap:16 }}>
+              {themeOptions.map(opt => (
+                <div key={opt.id} onClick={() => toggleTheme(opt.id)}
+                  style={{
+                    padding: "16px", borderRadius: 16, border: `2px solid ${theme === opt.id ? opt.color : C.border}`,
+                    background: theme === opt.id ? `${opt.color}15` : "var(--card)", cursor: "pointer", transition: "all 0.2s"
+                  }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: opt.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{opt.icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: C.text, fontSize: 14 }}>{opt.name}</div>
+                      <div style={{ fontSize: 11, color: C.textLight }}>{opt.desc}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
 
           {/* Security */}
           <Card>
-            <h3 style={{ fontSize:16, marginBottom:20, color:C.text }}>Security & Privacy</h3>
+            <h3 style={{ fontSize:16, fontWeight:800, marginBottom:20, color:C.text }}>Security & Privacy</h3>
 
             <div style={{ padding:"16px", background:C.cardAlt, borderRadius:12, marginBottom:20 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -92,7 +100,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <h4 style={{ fontSize:14, marginBottom:16, color:C.text }}>Change Password</h4>
+            <h4 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:C.text }}>Change Password</h4>
             <form onSubmit={handlePasswordChange} style={{ display:"flex", flexDirection:"column", gap:12, maxWidth:400 }}>
               <input type="password" placeholder="Current Password" value={pwd.current} onChange={e => setPwd({...pwd, current:e.target.value})}
                 style={{ padding:"10px 14px", borderRadius:10, border:`1px solid ${C.border}`, background:C.cardAlt, color:C.text }} />
