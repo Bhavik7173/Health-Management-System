@@ -21,15 +21,16 @@ import EHRPage from "./pages/EHRPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import SymptomCheckerPage from "./pages/SymptomCheckerPage";
 import SettingsPage from "./pages/SettingsPage";
+import RosterPage from "./pages/RosterPage";
 import PatientPortalPage from "./pages/PatientPortalPage";
 
 // Role → which pages they can access
 const ROLE_ACCESS = {
-  admin:        ["dashboard","patients","appointments","doctor","diagnosis","analytics","resources","medicine","contact","admin","audit","portal","reports","ehr","collaboration","symptoms","settings"],
-  doctor:       ["dashboard","patients","appointments","doctor","diagnosis","analytics","medicine","contact","resources","reports","ehr","collaboration","symptoms","settings"],
-  radiologist:  ["dashboard","diagnosis","patients","analytics","contact","resources","reports","ehr","collaboration","symptoms","settings"],
-  lab_tech:     ["dashboard","diagnosis","patients","analytics","contact","reports","symptoms","settings"],
-  receptionist: ["dashboard","patients","appointments","analytics","doctor","contact","symptoms","settings"],
+  admin:        ["dashboard","patients","appointments","doctor","diagnosis","analytics","resources","medicine","contact","admin","audit","portal","reports","ehr","collaboration","symptoms","settings","roster"],
+  doctor:       ["dashboard","patients","appointments","doctor","diagnosis","analytics","medicine","contact","resources","reports","ehr","collaboration","symptoms","settings","roster"],
+  radiologist:  ["dashboard","diagnosis","patients","analytics","contact","resources","reports","ehr","collaboration","symptoms","settings","roster"],
+  lab_tech:     ["dashboard","diagnosis","patients","analytics","contact","reports","symptoms","settings","roster"],
+  receptionist: ["dashboard","patients","appointments","analytics","doctor","contact","symptoms","settings","roster"],
   patient:      ["portal","settings"],
 };
 
@@ -106,6 +107,7 @@ function AppInner() {
           {page==="collaboration" && <CollaborationPage/>}
           {page==="symptoms"      && <SymptomCheckerPage/>}
           {page==="settings"      && <SettingsPage/>}
+          {page==="roster"        && <RosterPage/>}
         </main>
       </div>
     </div>

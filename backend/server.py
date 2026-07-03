@@ -2497,6 +2497,48 @@ async def medicine_symptom_search(body: dict, cu=Depends(get_current_user)):
     }
 
 
+# ── Staff Roster / Shifts ──────────────────────────────────────────────────────
+class ShiftIn(BaseModel):
+    user_id:    str
+    user_name:  str
+    role:       str
+    date:       str
+    start_time: str
+    end_time:   str
+    note:       str = ""
+
+@api_router.post("/admin/shifts")
+async def create_shift(data: ShiftIn, cu=Depends(get_current_user)):
+    if cu["role"] != "admin": raise HTTPException(403, "Admin only")
+
+    # Check for overlaps
+    overlap = await db.shifts.find_one({
+        "user_id": data.user_id,
+        "date":    data.date,
+        "$or": [
+            {"start_time": {"$lt": data.end_time}, "end_time": {"$gt": data.start_time}}
+        ]
+    })
+    if overlap:
+        raise HTTPException(400, f"Staff member already has a shift from {overlap['start_time']} to {overlap['end_time']}")
+
+    doc = {"_id": new_id(), **data.dict(), "created_at": now_iso()}
+    await db.shifts.insert_one(doc)
+    return fix_id(doc)
+
+@api_router.get("/admin/shifts")
+async def list_shifts(date: str = "", cu=Depends(get_current_user)):
+    query = {}
+    if date: query["date"] = date
+    docs = await db.shifts.find(query).sort([("date", 1), ("start_time", 1)]).to_list(200)
+    return fix_ids(docs)
+
+@api_router.delete("/admin/shifts/{sid}")
+async def delete_shift(sid: str, cu=Depends(get_current_user)):
+    if cu["role"] != "admin": raise HTTPException(403, "Admin only")
+    await db.shifts.delete_one({"_id": sid})
+    return {"ok": True}
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Mount API router
 # ══════════════════════════════════════════════════════════════════════════════

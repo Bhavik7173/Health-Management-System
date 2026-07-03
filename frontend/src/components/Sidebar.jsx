@@ -25,6 +25,7 @@ const ROLE_NAV = {
     ]},
     { group:"Other Menu", items:[
       { id:"doctor",       icon:"👨‍⚕️", label:"Doctors",    expandable:true },
+      { id:"roster",       icon:"📅",  label:"Staff Roster" },
       { id:"diagnosis",    icon:"🔬", label:"Department",  expandable:true },
       { id:"ehr",          icon:"📄", label:"Doctor Schedule" },
       { id:"analytics",   icon:"📊", label:"Analytics" },

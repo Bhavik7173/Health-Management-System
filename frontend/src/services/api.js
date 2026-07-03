@@ -154,6 +154,9 @@ Object.assign(adminService, {
   getAuditLogs:    (params={}) => request(`/admin/audit-logs?${new URLSearchParams(params)}`),
   toggleUserActive:(uid,active)=> request(`/admin/users/${uid}/activate`,{ method:"PATCH", body:JSON.stringify({is_active:active}) }),
   deleteUser:      (uid)       => request(`/admin/users/${uid}`,         { method:"DELETE" }),
+  getShifts:       (date="")   => request(`/admin/shifts${date?"?date="+date:""}`),
+  createShift:     (data)      => request("/admin/shifts", { method:"POST", body:JSON.stringify(data) }),
+  deleteShift:     (id)        => request(`/admin/shifts/${id}`, { method:"DELETE" }),
 });
 
 // ── Patient Portal ────────────────────────────────────────────────────────────
