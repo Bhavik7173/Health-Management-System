@@ -7,12 +7,6 @@ import {
 } from "recharts";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DOCTORS = [
-  { id:"d1", name:"Dr. Lida Gutierrez",    avatar:"LG", color:C.coral,  specialty:"Heart Surgeon",  slots:["08:00","09:00","10:00","11:00","14:00","15:30","16:00"], workDays:[1,2,3,4,5] },
-  { id:"d2", name:"Dr. Mayme Gomez",       avatar:"MG", color:C.blue,   specialty:"Radiologist",    slots:["08:30","09:30","11:00","13:00","14:30","16:00"],         workDays:[1,2,3,4,5] },
-  { id:"d3", name:"Dr. Christina Frazier", avatar:"CF", color:C.accent, specialty:"Neurologist",    slots:["09:00","09:30","10:30","14:00","14:30","15:30"],         workDays:[1,2,3,4] },
-  { id:"d4", name:"Dr. Alma Reed",         avatar:"AR", color:C.amber,  specialty:"Oncologist",     slots:["08:00","10:00","11:30","13:30","15:00","16:30"],         workDays:[2,3,4,5] },
-];
 
 const APPT_TYPES   = ["Consultation","Follow-up","Surgery Consult","MRI Review","Lab Results","Emergency","Vaccination","Check-up"];
 const STATUS_COL   = { confirmed:C.accent, pending:C.blue, cancelled:C.coral, completed:"#8b5cf6", waiting:C.amber, in_progress:"#06b6d4" };
@@ -45,17 +39,8 @@ function getWeekDays(year, month, day) {
   });
 }
 
-const SEED_APPTS = [
-  { id:"a1", date:todayStr, time:"10:00", doctorId:"d1", doctor:"Dr. Lida Gutierrez",    avatar:"LG", color:C.coral,  patient:"Sarah Johnson", type:"Surgery Consult", status:"confirmed",   notes:"Pre-op assessment", queue_status:"waiting" },
-  { id:"a2", date:todayStr, time:"11:00", doctorId:"d2", doctor:"Dr. Mayme Gomez",       avatar:"MG", color:C.blue,   patient:"James Lee",     type:"MRI Review",      status:"pending",     notes:"Bring scans",       queue_status:null },
-  { id:"a3", date:todayStr, time:"14:00", doctorId:"d3", doctor:"Dr. Christina Frazier", avatar:"CF", color:C.accent, patient:"Maria Garcia",  type:"Consultation",    status:"confirmed",   notes:"",                  queue_status:null },
-  { id:"a4", date:toDateStr(today.getFullYear(),today.getMonth(),today.getDate()+2), time:"09:30", doctorId:"d3", doctor:"Dr. Christina Frazier", avatar:"CF", color:C.accent, patient:"Tom Chen", type:"Neurology", status:"confirmed", notes:"", queue_status:null },
-  { id:"a5", date:toDateStr(today.getFullYear(),today.getMonth(),today.getDate()-1), time:"08:00", doctorId:"d1", doctor:"Dr. Lida Gutierrez",    avatar:"LG", color:C.coral,  patient:"Alice Wong", type:"Check-up", status:"completed", notes:"", queue_status:"done" },
-  { id:"a6", date:toDateStr(today.getFullYear(),today.getMonth(),today.getDate()+5), time:"15:30", doctorId:"d2", doctor:"Dr. Mayme Gomez",       avatar:"MG", color:C.blue,   patient:"Robert Kim", type:"Consultation", status:"pending", notes:"First visit", queue_status:null },
-  { id:"a7", date:toDateStr(today.getFullYear(),today.getMonth(),today.getDate()+1), time:"09:00", doctorId:"d4", doctor:"Dr. Alma Reed",         avatar:"AR", color:C.amber,  patient:"Linda Park", type:"Follow-up",    status:"confirmed", notes:"Chemo check", queue_status:null },
-];
 
-const SEED_TRENDS = Array.from({length:7},(_,i)=>{
+const [] = Array.from({length:7},(_,i)=>{
   const d = new Date(); d.setDate(d.getDate()-6+i);
   return { date:d.toLocaleDateString("en",{weekday:"short"}), total:Math.floor(Math.random()*12+3), confirmed:Math.floor(Math.random()*6+1), completed:Math.floor(Math.random()*4), cancelled:Math.floor(Math.random()*2) };
 });

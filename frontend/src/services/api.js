@@ -9,10 +9,24 @@ async function request(path, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
-  const res  = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (networkErr) {
+    throw new Error(
+      "Cannot reach the backend server. Make sure it is running:\n  cd backend && uvicorn server:app --reload --port 8000"
+    );
+  }
   if (res.status === 401) { localStorage.clear(); window.location.reload(); return; }
+  if (res.status === 503) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      data.detail ||
+      "Database unavailable. Please start MongoDB:\n  Windows: net start MongoDB\n  Mac/Linux: mongod"
+    );
+  }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || "Request failed");
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
   return data;
 }
 
@@ -20,11 +34,21 @@ async function request(path, options = {}) {
 export const authService = {
   async login(email, password) {
     const body = new URLSearchParams({ username: email, password });
-    const res  = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST", body,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    const data = await res.json();
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST", body,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+    } catch {
+      throw new Error(
+        "Cannot reach the backend. Make sure it is running:\n  cd backend && uvicorn server:app --reload --port 8000"
+      );
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 503) throw new Error(
+      data.detail || "Database unavailable — please start MongoDB first."
+    );
     if (!res.ok) throw new Error(data.detail || "Login failed");
     return data;
   },
@@ -232,11 +256,31 @@ export const telemedicineService = {
   list:     ()     => request("/portal/telemedicine"),
 };
 
-// ── Extended Analytics (Topic 9) ─────────────────────────────────────────────
+// ── Extended Analytics ────────────────────────────────────────────────────────
 Object.assign(analyticsService, {
-  getRiskPrediction:      ()         => request("/analytics/risk-prediction"),
-  getRevenue:             ()         => request("/analytics/revenue"),
-  getDiseaseTrends:       ()         => request("/analytics/disease-trends"),
-  getSeverityScoring:     ()         => request("/analytics/severity-scoring"),
-  getAutoReportSuggestions:(scanId="")=> request(`/analytics/auto-report-suggestions${scanId?"?scan_id="+scanId:""}`),
+  getRiskPrediction:        ()          => request("/analytics/risk-prediction"),
+  getRevenue:               ()          => request("/analytics/revenue"),
+  getDiseaseTrends:         ()          => request("/analytics/disease-trends"),
+  getSeverityScoring:       ()          => request("/analytics/severity-scoring"),
+  getAutoReportSuggestions: (scanId="") => request(`/analytics/auto-report-suggestions${scanId?"?scan_id="+scanId:""}`),
+  getAppointmentTrends:     ()          => request("/appointments/stats/trends"),
+  getAppointmentsByDoctor:  ()          => request("/appointments/stats/by-doctor"),
+  getAppointmentSummary:    ()          => request("/appointments/stats/summary"),
+  getPatientSummary:        ()          => request("/patients/stats/summary"),
+  getDiagnosisStats:        ()          => request("/diagnosis/stats"),
 });
+
+
+// ── Medicine Database (comprehensive medicine info) ───────────────────────────
+export const medicineDbService = {
+  list:          (params={}) => request(`/medicine-db/list?${new URLSearchParams(params)}`),
+  get:           (id)        => request(`/medicine-db/${id}`),
+  getCategories: ()          => request("/medicine-db/categories"),
+  searchBySymptom: (query)   => request("/medicine-db/symptom-search", { method:"POST", body:JSON.stringify({query}) }),
+};
+
+// ── Symptom Checker (AI) ──────────────────────────────────────────────────────
+export const symptomService = {
+  check:   (data) => request("/portal/symptom-check",   { method:"POST", body:JSON.stringify(data) }),
+  history: ()     => request("/portal/symptom-history"),
+};

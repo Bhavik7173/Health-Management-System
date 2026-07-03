@@ -17,15 +17,16 @@ import AuditLogsPage from "./pages/AuditLogsPage";
 import ReportPage from "./pages/ReportPage";
 import EHRPage from "./pages/EHRPage";
 import CollaborationPage from "./pages/CollaborationPage";
+import SymptomCheckerPage from "./pages/SymptomCheckerPage";
 import PatientPortalPage from "./pages/PatientPortalPage";
 
 // Role → which pages they can access
 const ROLE_ACCESS = {
-  admin:        ["dashboard","patients","appointments","doctor","diagnosis","analytics","resources","medicine","contact","admin","audit","portal","reports", "ehr","collaboration"],
-  doctor:       ["dashboard","patients","appointments","doctor","diagnosis","medicine","contact","resources","reports", "ehr","collaboration"],
-  radiologist:  ["dashboard","diagnosis","patients","contact","resources","reports", "ehr","collaboration"],
-  lab_tech:     ["dashboard","diagnosis","patients","contact","reports"],
-  receptionist: ["dashboard","patients","appointments","doctor","contact"],
+  admin:        ["dashboard","patients","appointments","doctor","diagnosis","analytics","resources","medicine","contact","admin","audit","portal","reports","ehr","collaboration","symptoms"],
+  doctor:       ["dashboard","patients","appointments","doctor","diagnosis","analytics","medicine","contact","resources","reports","ehr","collaboration","symptoms"],
+  radiologist:  ["dashboard","diagnosis","patients","analytics","contact","resources","reports","ehr","collaboration","symptoms"],
+  lab_tech:     ["dashboard","diagnosis","patients","analytics","contact","reports","symptoms"],
+  receptionist: ["dashboard","patients","appointments","analytics","doctor","contact","symptoms"],
   patient:      ["portal"],
 };
 
@@ -66,35 +67,37 @@ function AppInner() {
 
   if (!user) return <AuthPage />;
 
-  // Patient portal — no sidebar
+  // Patient portal — no sidebar, clean topnav
   if (user.role === "patient") return (
     <>
       <SessionTimeout />
-      <div style={{minHeight:"100vh",background:"#f0f4f0"}}>
-        <div style={{background:"#fff",padding:"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:22}}>⚕️</div>
-            <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:"#1a1a2e"}}>MediCore AI</span>
-            <span style={{fontSize:12,color:"#5B8DEF",fontWeight:600,background:"#EEF3FD",padding:"2px 10px",borderRadius:20}}>Patient Portal</span>
+      <div style={{minHeight:"100vh", background:"#f0f4f0"}}>
+        <div style={{background:"#fff", padding:"0 28px", height:58, display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid #e8eef0", position:"sticky", top:0, zIndex:100}}>
+          <div style={{display:"flex", alignItems:"center", gap:10}}>
+            <span style={{fontSize:20}}>⚕️</span>
+            <span style={{fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:"#1a1a2e"}}>MediCore AI</span>
+            <span style={{fontSize:11, color:"#5B8DEF", fontWeight:700, background:"#EEF3FD", padding:"2px 10px", borderRadius:20}}>Patient Portal</span>
           </div>
-          <div style={{display:"flex",gap:16,alignItems:"center"}}>
-            <span style={{fontSize:13,color:"#94a3b8"}} data-testid="patient-portal-name">{user.name}</span>
+          <div style={{display:"flex", gap:12, alignItems:"center"}}>
+            <span style={{fontSize:13, color:"#94a3b8", fontWeight:600}} data-testid="patient-portal-name">{user.name}</span>
             <button data-testid="patient-portal-signout" onClick={signOut}
-              style={{fontSize:13,color:"#F47B7B",background:"none",border:"1px solid #F47B7B44",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontWeight:700}}>
+              style={{fontSize:12, color:"#F47B7B", background:"none", border:"1px solid #F47B7B44", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontWeight:700}}>
               Sign Out
             </button>
           </div>
         </div>
-        <div style={{padding:28}}><PatientPortalPage /></div>
+        <div style={{maxWidth:1100, margin:"0 auto", padding:"24px 28px"}}>
+          <PatientPortalPage />
+        </div>
       </div>
     </>
   );
 
   return (
-    <div style={{display:"flex",minHeight:"100vh"}}>
+    <div style={{display:"flex",minHeight:"100vh",background:"#F4F6FA"}}>
       <SessionTimeout />
       <Sidebar page={page} setPage={navigate} userRole={user.role} />
-      <main style={{flex:1,overflow:"auto",padding:28,background:"#f0f4f0"}}>
+      <main style={{flex:1,overflow:"auto",padding:"24px 28px",background:"#F4F6FA"}}>
         {page==="dashboard"    && <Dashboard       setPage={navigate}/>}
         {page==="patients"     && <PatientPage     />}
         {page==="appointments" && <AppointmentPage />}
@@ -109,6 +112,7 @@ function AppInner() {
         {page==="reports"      && <ReportPage/>}
         {page==="ehr"          && <EHRPage/>}
         {page==="collaboration" && <CollaborationPage/>}
+        {page==="symptoms"      && <SymptomCheckerPage/>}
       </main>
     </div>
   );

@@ -91,8 +91,8 @@ export default function DiagnosisPage({ token }) {
 
   useEffect(() => {
     diagnosisService.getScans()
-      .then(data => { if (data?.length) setScans(data); })
-      .catch(() => {});
+      .then(data => { if (data?.length) setScans(data); else setScans(MOCK_SCANS); })
+      .catch(() => setScans(MOCK_SCANS));
   }, []);
 
   const stats = {

@@ -17,86 +17,10 @@ const LAB_TESTS   = ["CBC","Blood Glucose","HbA1c","Lipid Panel","LFT","RFT","Th
 const FOLLOW_UPS  = ["1 week","2 weeks","1 month","3 months","6 months","1 year","PRN","As needed"];
 
 // ── Mock patient list ──────────────────────────────────────────────────────────
-const PATIENTS = [
-  { id:"p1", name:"Sarah Johnson",  avatar:"SJ", color:C.coral,  doctor:"Dr. Lida Gutierrez",   status:"active",   blood:"A+", dob:"1985-03-12" },
-  { id:"p2", name:"James Lee",      avatar:"JL", color:C.blue,   doctor:"Dr. Christina Frazier", status:"critical", blood:"O+", dob:"1972-07-25" },
-  { id:"p3", name:"Maria Garcia",   avatar:"MG", color:C.accent, doctor:"Dr. Mayme Gomez",       status:"active",   blood:"B+", dob:"1990-11-03" },
-  { id:"p4", name:"Tom Chen",       avatar:"TC", color:C.amber,  doctor:"Dr. Mayme Gomez",       status:"critical", blood:"AB-",dob:"1965-05-18" },
-];
 
 // ── Seed EHR data ──────────────────────────────────────────────────────────────
-const SEED_VISIT_NOTES = {
-  p1: [
-    { id:"vn1", patient_id:"p1", visit_date:"2026-05-20", visit_type:"Outpatient", doctor_name:"Dr. Lida Gutierrez", severity:"abnormal",
-      subjective:"Patient presents with productive cough, fever 38.5°C for 3 days. No haemoptysis.",
-      objective:"RR 22/min, O₂ 96%, right lower lobe crackles on auscultation. CXR: RLL consolidation.",
-      assessment:"Community-acquired pneumonia, right lower lobe.",
-      plan:"Amoxicillin 500mg TDS × 7 days. Paracetamol PRN. Rest, fluids.",
-      follow_up:"Review in 1 week or sooner if worsening." },
-    { id:"vn2", patient_id:"p1", visit_date:"2026-02-28", visit_type:"Outpatient", doctor_name:"Dr. Lida Gutierrez", severity:"normal",
-      subjective:"Annual check-up. Feeling well. Occasional mild headaches.",
-      objective:"BP 128/82, HR 74, BMI 24.9. All systems NAD.",
-      assessment:"Mild hypertension, well-controlled on current medication.",
-      plan:"Continue Lisinopril. Reduce sodium intake. Repeat BP in 3 months.",
-      follow_up:"3 months" },
-  ],
-  p2: [
-    { id:"vn3", patient_id:"p2", visit_date:"2026-05-19", visit_type:"Inpatient", doctor_name:"Dr. Christina Frazier", severity:"critical",
-      subjective:"Persistent headaches x 6 weeks, visual disturbances, nausea. No prior CNS history.",
-      objective:"GCS 15. Left visual field defect. MRI: 4.2cm mass left temporal lobe with ring enhancement.",
-      assessment:"Grade 2 Glioma, left temporal lobe. Biopsy confirmed.",
-      plan:"Refer neurosurgery urgent. Dexamethasone 4mg BD. Seizure prophylaxis. MDT meeting scheduled.",
-      follow_up:"Neurosurgery review within 48 hours." },
-  ],
-  p3: [],
-  p4: [
-    { id:"vn4", patient_id:"p4", visit_date:"2026-05-17", visit_type:"Emergency", doctor_name:"Dr. Mayme Gomez", severity:"critical",
-      subjective:"Productive cough 3 months, night sweats, 8kg weight loss, haemoptysis.",
-      objective:"Temp 38.1, O₂ 94%. CXR: bilateral upper lobe cavitation, hilar lymphadenopathy.",
-      assessment:"Active pulmonary tuberculosis. Notifiable disease. Isolation initiated.",
-      plan:"RIPE regimen commenced. Sputum AFB × 3. Contact tracing. Infection control notified.",
-      follow_up:"Daily review until stable." },
-  ],
-};
 
-const SEED_TREATMENT_PLANS = {
-  p1: [
-    { id:"tp1", patient_id:"p1", title:"Hypertension Management", diagnosis:"Essential Hypertension", status:"active",
-      start_date:"2025-09-01", end_date:"2026-09-01", follow_up_freq:"3 months",
-      goals:[{text:"Maintain BP <130/80",target_date:"2026-06-01",achieved:false},{text:"Reduce sodium <2g/day",target_date:"2026-03-01",achieved:true}],
-      medications:[{drug:"Lisinopril 10mg",dosage:"1×/day",duration:"ongoing",notes:"Monitor renal function"}],
-      interventions:["Dietary modification","Exercise programme"],
-      notes:"Patient motivated. Consider adding amlodipine if BP not controlled." },
-  ],
-  p2: [
-    { id:"tp2", patient_id:"p2", title:"Glioma Treatment Protocol", diagnosis:"Grade 2 Glioma", status:"active",
-      start_date:"2026-05-20", end_date:"2026-11-20", follow_up_freq:"Weekly",
-      goals:[{text:"Complete surgical resection",target_date:"2026-06-01",achieved:false},{text:"6 cycles chemotherapy",target_date:"2026-11-01",achieved:false}],
-      medications:[{drug:"Dexamethasone 4mg",dosage:"2×/day",duration:"ongoing",notes:"Taper post-surgery"},{drug:"Temozolomide",dosage:"Per protocol",duration:"6 months",notes:"Monitor CBC"}],
-      interventions:["Craniotomy","Radiotherapy","Chemotherapy","Physiotherapy"],
-      notes:"MDT approach. Neurosurgery + oncology collaboration required." },
-  ],
-  p3: [], p4: [],
-};
 
-const SEED_VITALS_HISTORY = {
-  p1: [
-    { date:"2026-05-20", bp:"138/88", hr:88, o2:96, temp:38.5, weight:68, glucose:"6.1" },
-    { date:"2026-04-10", bp:"132/84", hr:76, o2:98, temp:36.8, weight:68, glucose:"5.8" },
-    { date:"2026-02-28", bp:"128/82", hr:74, o2:98, temp:36.7, weight:67, glucose:"5.4" },
-    { date:"2025-11-15", bp:"130/85", hr:80, o2:97, temp:36.9, weight:69, glucose:"5.5" },
-    { date:"2025-09-01", bp:"142/90", hr:82, o2:97, temp:36.6, weight:70, glucose:"5.6" },
-  ],
-  p2: [
-    { date:"2026-05-19", bp:"145/92", hr:88, o2:96, temp:37.2, weight:80, glucose:"9.2" },
-    { date:"2026-04-30", bp:"148/94", hr:90, o2:95, temp:37.0, weight:81, glucose:"8.9" },
-  ],
-  p3: [{ date:"2026-05-18", bp:"118/76", hr:68, o2:99, temp:36.6, weight:62, glucose:"5.2" }],
-  p4: [
-    { date:"2026-05-17", bp:"138/88", hr:92, o2:94, temp:38.1, weight:72, glucose:"—" },
-    { date:"2026-04-22", bp:"135/86", hr:88, o2:95, temp:37.8, weight:74, glucose:"—" },
-  ],
-};
 
 // ── EHR PDF Export ─────────────────────────────────────────────────────────────
 function printEHR(patient, visitNotes, treatmentPlans, vitalsHistory, labResults) {
@@ -356,7 +280,7 @@ export default function EHRPage() {
               <div key={i} style={{display:"flex",gap:16,alignItems:"flex-start",marginBottom:16,position:"relative",zIndex:1}}>
                 {/* Timeline dot */}
                 <div style={{width:56,display:"flex",justifyContent:"center",flexShrink:0,paddingTop:4}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",background:col+"20",border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:"#fff",boxShadow:`0 0 0 4px #fff`}}>
+                  <div style={{width:32,height:32,borderRadius:"50%",background:"#fff",border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:`0 0 0 4px #fff`}}>
                     {TYPE_ICON[e.type]||"📋"}
                   </div>
                 </div>

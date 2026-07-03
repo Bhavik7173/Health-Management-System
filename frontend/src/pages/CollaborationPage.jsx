@@ -7,59 +7,8 @@ const URGENCY_COL = { routine:C.blue, urgent:C.amber, emergency:C.coral };
 const STATUS_COL  = { open:C.accent, resolved:"#8b5cf6", closed:C.textLight, pending:C.amber };
 const ROLE_COL    = { doctor:C.blue, radiologist:C.accent, admin:C.coral, lab_tech:C.amber };
 
-const SEED_CASES = [
-  {
-    id:"c1", title:"Unusual chest opacity — second opinion needed",
-    patient_name:"Sarah Johnson", scan_type:"xray", diagnosis:"Pneumonia vs. Malignancy",
-    description:"PA chest film shows right upper lobe opacity — not typical pneumonia distribution. Requesting radiologist and oncologist second opinion before starting treatment.",
-    urgency:"urgent", specialties:["Radiology","Oncology"],
-    created_by_name:"Dr. Lida Gutierrez", created_at:"2026-05-23T09:00:00", status:"open",
-    comments:[
-      {id:"cm1",author:"Dr. Mayme Gomez",role:"radiologist",text:"Reviewed the scan. The opacity has irregular margins — I'd recommend CT chest for further characterisation. Malignancy cannot be excluded.",created_at:"2026-05-23T09:30:00"},
-      {id:"cm2",author:"Dr. Alma Reed",role:"doctor",text:"Agree with radiology. CT + PET scan recommended. Will arrange bronchoscopy if CT confirms suspicious mass.",created_at:"2026-05-23T10:00:00"},
-    ],
-    second_opinions:[
-      {id:"so1",requested_by:"Dr. Lida Gutierrez",requested_from:"Dr. Alma Reed",specialty:"Oncology",message:"Please review imaging and advise on malignancy risk.",status:"completed",response:"High suspicion of primary lung malignancy. Recommend urgent staging workup."},
-    ],
-    viewers:["d1","d2"],
-  },
-  {
-    id:"c2", title:"Paediatric brain MRI — Grade 2 Glioma confirmed",
-    patient_name:"James Lee", scan_type:"mri", diagnosis:"Grade 2 Glioma",
-    description:"72-year-old male with 6 weeks of headaches. MRI shows 4.2cm left temporal mass with ring enhancement. Urgent neurosurgical and oncology input required.",
-    urgency:"emergency", specialties:["Neurosurgery","Oncology","Radiology"],
-    created_by_name:"Dr. Christina Frazier", created_at:"2026-05-22T14:00:00", status:"open",
-    comments:[
-      {id:"cm3",author:"Dr. Mayme Gomez",role:"radiologist",text:"MRI reviewed in detail. Ring-enhancing lesion with mass effect — Grade 3-4 glioma most likely. Spectroscopy shows elevated choline.",created_at:"2026-05-22T15:00:00"},
-    ],
-    second_opinions:[],
-    viewers:["d3"],
-  },
-  {
-    id:"c3", title:"TB contact tracing — ward exposure",
-    patient_name:"Tom Chen", scan_type:"xray", diagnosis:"Active Pulmonary TB",
-    description:"Patient admitted with confirmed active TB. Requesting infection control guidance and contact tracing for ward staff exposed over past 2 weeks.",
-    urgency:"emergency", specialties:["Infectious Disease","Infection Control"],
-    created_by_name:"Dr. Mayme Gomez", created_at:"2026-05-21T08:00:00", status:"resolved",
-    comments:[
-      {id:"cm4",author:"Dr. Lida Gutierrez",role:"doctor",text:"Isolation protocol initiated. All direct-contact staff have been notified and screened.",created_at:"2026-05-21T09:00:00"},
-    ],
-    second_opinions:[],
-    viewers:["d1","d2","d3"],
-  },
-];
 
-const SEED_SHARED = [
-  {id:"s1",patient_name:"Sarah Johnson",scan_type:"XRAY",shared_by:"Dr. Lida Gutierrez",message:"Please review this X-ray urgently.",created_at:"2026-05-23T09:00:00"},
-  {id:"s2",patient_name:"James Lee",scan_type:"MRI",shared_by:"Dr. Christina Frazier",message:"Glioma MRI — requesting second read.",created_at:"2026-05-22T14:00:00"},
-];
 
-const DOCTORS = [
-  {name:"Dr. Lida Gutierrez",  specialty:"Heart Surgery",  avatar:"LG", color:C.coral},
-  {name:"Dr. Mayme Gomez",     specialty:"Radiology",      avatar:"MG", color:C.blue},
-  {name:"Dr. Christina Frazier",specialty:"Neurology",     avatar:"CF", color:C.accent},
-  {name:"Dr. Alma Reed",       specialty:"Oncology",       avatar:"AR", color:C.amber},
-];
 
 export default function CollaborationPage() {
   const { user } = useAuth();

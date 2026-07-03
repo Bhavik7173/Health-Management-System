@@ -1,6 +1,8 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import JSONResponse
+from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr
 import bcrypt as _bcrypt
@@ -10,6 +12,7 @@ from typing import Optional, List
 from enum import Enum
 import os, uuid, random
 from dotenv import load_dotenv
+from pymongo.errors import ServerSelectionTimeoutError, ConnectionFailure
 
 load_dotenv()
 
@@ -29,13 +32,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Global handler: catch unhandled MongoDB connection errors ──────────────────
+@app.exception_handler(ServerSelectionTimeoutError)
+async def mongo_timeout_handler(request: Request, exc: ServerSelectionTimeoutError):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database unavailable. Please ensure MongoDB is running. Check MONGO_URL in backend/.env."}
+    )
+
+@app.exception_handler(ConnectionFailure)
+async def mongo_conn_handler(request: Request, exc: ConnectionFailure):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database connection failed. Please ensure MongoDB is running."}
+    )
+
+# ── Startup: warn clearly if MongoDB is unreachable ───────────────────────────
+@app.on_event("startup")
+async def startup_db_check():
+    import asyncio
+    from motor.motor_asyncio import AsyncIOMotorClient as _Client
+    try:
+        test_client = _Client(MONGO_URL, serverSelectionTimeoutMS=3000)
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, test_client.server_info),
+            timeout=3.0
+        )
+        print(f"✅ MongoDB connected → {MONGO_URL} / {DB_NAME}")
+    except Exception:
+        print(f"⚠️  WARNING: MongoDB NOT reachable at {MONGO_URL}")
+        print(f"   → Install MongoDB and run: mongod")
+        print(f"   → Or update MONGO_URL in backend/.env to point to your MongoDB instance")
+        print(f"   → API will start but all DB operations will return 503 until MongoDB is available")
+
 client = AsyncIOMotorClient(MONGO_URL)
 db     = client[DB_NAME]
 
 api_router = APIRouter(prefix="/api")
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+def db_error_response():
+    """Return a clean 503 when MongoDB is unreachable."""
+    raise HTTPException(
+        status_code=503,
+        detail="Database unavailable. Please ensure MongoDB is running on localhost:27017 (or update MONGO_URL in backend/.env)."
+    )
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 def hash_pw(pw):
@@ -83,8 +125,6 @@ def fix_ids(docs):
     return [fix_id(d) for d in docs]
 
 import pyotp, qrcode, io, base64, hashlib, secrets
-from fastapi.responses import JSONResponse
-from fastapi import Request
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ROLES — all 6 roles with their permissions
@@ -101,9 +141,9 @@ ROLES = {
 ROLE_PERMISSIONS = {
     "admin":        ["*"],
     "doctor":       ["patients:read","patients:write","scans:read","scans:write","appointments:read","appointments:write","prescriptions:write","messages:*","analytics:read"],
-    "radiologist":  ["scans:read","scans:write","patients:read","reports:write","messages:*"],
-    "lab_tech":     ["scans:read","scans:write","labs:write","patients:read"],
-    "receptionist": ["patients:read","patients:write","appointments:read","appointments:write","billing:read"],
+    "radiologist":  ["scans:read","scans:write","patients:read","reports:write","messages:*","analytics:read"],
+    "lab_tech":     ["scans:read","scans:write","labs:write","patients:read","analytics:read"],
+    "receptionist": ["patients:read","patients:write","appointments:read","appointments:write","billing:read","analytics:read"],
     "patient":      ["own:read","appointments:own","prescriptions:own","reports:own"],
 }
 
@@ -152,61 +192,72 @@ class RegisterIn(BaseModel):
 
 @api_router.post("/auth/register")
 async def register(data: RegisterIn, request: Request):
-    if await db.users.find_one({"email": data.email}):
-        raise HTTPException(400, "Email already registered")
-    if data.role not in ROLES:
-        raise HTTPException(400, f"Invalid role. Must be one of: {', '.join(ROLES.keys())}")
+    try:
+        if await db.users.find_one({"email": data.email}):
+            raise HTTPException(400, "Email already registered")
+        if data.role not in ROLES:
+            raise HTTPException(400, f"Invalid role. Must be one of: {', '.join(ROLES.keys())}")
 
-    user = {
-        "_id":        new_id(),
-        "name":       data.name,
-        "email":      data.email,
-        "password":   hash_pw(data.password),
-        "role":       data.role,
-        "created_at": now_iso(),
-        "provider":   "email",
-        "mfa_enabled":  False,
-        "mfa_secret":   None,
-        "is_active":    True,
-        "last_login":   None,
-        "failed_logins": 0,
-        # Patient-specific
-        "dob":      data.dob,
-        "phone":    data.phone,
-        "address":  data.address,
-    }
-    await db.users.insert_one(user)
-    await audit(user["_id"], "REGISTER", "users", f"New {data.role} account: {data.email}",
-                request.client.host if request.client else "")
-    return make_token_response(user)
+        user = {
+            "_id":        new_id(),
+            "name":       data.name,
+            "email":      data.email,
+            "password":   hash_pw(data.password),
+            "role":       data.role,
+            "created_at": now_iso(),
+            "provider":   "email",
+            "mfa_enabled":  False,
+            "mfa_secret":   None,
+            "is_active":    True,
+            "last_login":   None,
+            "failed_logins": 0,
+            "dob":      data.dob,
+            "phone":    data.phone,
+            "address":  data.address,
+        }
+        await db.users.insert_one(user)
+        await audit(user["_id"], "REGISTER", "users", f"New {data.role} account: {data.email}",
+                    request.client.host if request.client else "")
+        return make_token_response(user)
+    except HTTPException:
+        raise
+    except (ServerSelectionTimeoutError, ConnectionFailure):
+        db_error_response()
+    except Exception as e:
+        raise HTTPException(500, f"Registration failed: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(form: OAuth2PasswordRequestForm = Depends(), request: Request = None):
-    user = await db.users.find_one({"email": form.username})
-    if not user or not verify_pw(form.password, user.get("password","")):
-        if user:
-            await db.users.update_one({"_id": user["_id"]}, {"$inc": {"failed_logins": 1}})
+    try:
+        user = await db.users.find_one({"email": form.username})
+        if not user or not verify_pw(form.password, user.get("password","")):
+            if user:
+                await db.users.update_one({"_id": user["_id"]}, {"$inc": {"failed_logins": 1}})
+            ip = request.client.host if request and request.client else ""
+            await audit(user["_id"] if user else "unknown", "LOGIN_FAILED", "auth",
+                        f"Failed login for {form.username}", ip)
+            raise HTTPException(401, "Invalid email or password")
+
+        if not user.get("is_active", True):
+            raise HTTPException(403, "Account is deactivated. Contact your administrator.")
+
         ip = request.client.host if request and request.client else ""
-        await audit(user["_id"] if user else "unknown", "LOGIN_FAILED", "auth",
-                    f"Failed login for {form.username}", ip)
-        raise HTTPException(401, "Invalid email or password")
+        await db.users.update_one({"_id": user["_id"]}, {
+            "$set": {"last_login": now_iso(), "failed_logins": 0}
+        })
+        await audit(user["_id"], "LOGIN", "auth", f"Successful login from {ip}", ip)
 
-    if not user.get("is_active", True):
-        raise HTTPException(403, "Account is deactivated. Contact your administrator.")
+        if user.get("mfa_enabled"):
+            temp = create_token({"sub": user["email"], "mfa_pending": True}, minutes=5)
+            return {"mfa_required": True, "temp_token": temp, "user_name": user["name"]}
 
-    # Reset failed logins + update last_login
-    ip = request.client.host if request and request.client else ""
-    await db.users.update_one({"_id": user["_id"]}, {
-        "$set": {"last_login": now_iso(), "failed_logins": 0}
-    })
-    await audit(user["_id"], "LOGIN", "auth", f"Successful login from {ip}", ip)
-
-    # If MFA is enabled, return mfa_required flag instead of full token
-    if user.get("mfa_enabled"):
-        temp = create_token({"sub": user["email"], "mfa_pending": True}, minutes=5)
-        return {"mfa_required": True, "temp_token": temp, "user_name": user["name"]}
-
-    return make_token_response(user)
+        return make_token_response(user)
+    except HTTPException:
+        raise
+    except (ServerSelectionTimeoutError, ConnectionFailure):
+        db_error_response()
+    except Exception as e:
+        raise HTTPException(500, f"Login failed: {str(e)}")
 
 @api_router.post("/auth/verify-mfa")
 async def verify_mfa(body: dict):
@@ -2082,9 +2133,265 @@ async def list_doctors(search: str = "", specialty: str = "", cu=Depends(get_cur
 @api_router.get("/auth/admin-exists")
 async def admin_exists_check():
     """Public endpoint — does any admin account exist?"""
-    count = await db.users.count_documents({"role": "admin"})
-    return {"exists": count > 0}
+    try:
+        count = await db.users.count_documents({"role": "admin"})
+        return {"exists": count > 0}
+    except (ServerSelectionTimeoutError, ConnectionFailure):
+        # MongoDB not running yet — tell the frontend no admin exists so setup can proceed
+        return {"exists": False, "db_offline": True}
+    except Exception:
+        return {"exists": False, "db_offline": True}
 
 
 # Mount API router
+app.include_router(api_router)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AI SYMPTOM CHECKER (integrated from symptom_routes.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class SymptomCheckIn(BaseModel):
+    symptoms:            str
+    duration:            str  = ""
+    severity:            str  = "mild"
+    age:                 int  = 30
+    gender:              str  = "unknown"
+    existing_conditions: list = []
+    allergies:           list = []
+    current_medications: list = []
+
+SYMPTOM_DB_INTEGRATED = {
+    "fever|temperature|hot|chills|sweating|body ache": {
+        "condition":"Fever / Viral Infection","urgency":"moderate",
+        "precautions":["Rest and avoid exertion","Stay in a cool room","Drink plenty of fluids","Monitor temperature every 4 hours","Isolate to prevent spread"],
+        "medications":[{"name":"Paracetamol","dose":"500mg–1g every 4–6 hours","note":"Do not exceed 4g/day"},{"name":"Ibuprofen","dose":"400mg every 6–8 hours with food","note":"Avoid if stomach issues"}],
+        "home_remedies":["Lukewarm sponge bath","Ginger + honey in warm water","Cold compress on forehead","Coconut water"],
+        "when_to_see":"Fever above 39.5°C, lasting > 3 days, or with rash/stiff neck/confusion",
+        "red_flags":["Fever > 39.5°C","Seizures","Difficulty breathing","Stiff neck + high fever","Confusion"],
+    },
+    "cough|throat|sore throat|phlegm|mucus|cold|runny nose": {
+        "condition":"Upper Respiratory Infection","urgency":"mild",
+        "precautions":["Gargle warm salt water 3–4x daily","Avoid cold drinks","Steam inhalation twice daily","Wear a mask"],
+        "medications":[{"name":"Cough syrup (Dextromethorphan)","dose":"10–20ml every 4–6 hours","note":"Dry cough"},{"name":"Guaifenesin","dose":"200–400mg every 4 hours","note":"Productive cough"},{"name":"Throat lozenges","dose":"As needed","note":"Soothing"}],
+        "home_remedies":["Honey + ginger + lemon tea","Turmeric milk","Steam inhalation","Salt water gargle"],
+        "when_to_see":"Cough > 2 weeks, blood in sputum, or high fever",
+        "red_flags":["Blood in sputum","Difficulty breathing","High fever + cough","Cough > 2 weeks"],
+    },
+    "headache|migraine|head pain|head hurts|dizzy": {
+        "condition":"Headache / Migraine","urgency":"mild",
+        "precautions":["Rest in dark quiet room","Cold compress on forehead","Stay hydrated","Avoid bright screens","Limit caffeine"],
+        "medications":[{"name":"Paracetamol","dose":"500mg–1g every 4–6 hours","note":"First choice"},{"name":"Ibuprofen","dose":"400mg every 6–8 hours","note":"Anti-inflammatory"}],
+        "home_remedies":["Peppermint oil on temples","Ginger tea","Cold compress","Gentle massage"],
+        "when_to_see":"Sudden severe thunderclap headache, with fever/stiff neck, or after head injury",
+        "red_flags":["Sudden worst headache of life","Headache + fever + stiff neck","After head injury","With vision changes"],
+    },
+    "stomach|nausea|vomit|diarrhea|diarrhoea|abdomen|bloating|indigestion|heartburn|acidity": {
+        "condition":"Gastrointestinal Issue","urgency":"mild",
+        "precautions":["BRAT diet: Banana Rice Applesauce Toast","Avoid spicy food","Stay hydrated with ORS","Small frequent meals"],
+        "medications":[{"name":"ORS","dose":"1 sachet in 1L water after each stool","note":"Prevents dehydration"},{"name":"Domperidone","dose":"10mg 3x daily before meals","note":"For nausea"},{"name":"Omeprazole","dose":"20mg once daily before breakfast","note":"For acidity"}],
+        "home_remedies":["Ginger tea","Coconut water","Probiotic yogurt","Peppermint tea","Rice water"],
+        "when_to_see":"Severe pain, blood in stool, dehydration, or symptoms > 48 hours",
+        "red_flags":["Blood in stool or vomit","Severe cramping","Signs of dehydration","Symptoms > 48 hours"],
+    },
+    "chest|breathing|breathe|shortness|wheeze|asthma": {
+        "condition":"Chest / Breathing Difficulty","urgency":"high",
+        "precautions":["Sit upright — do NOT lie flat","Avoid triggers","Use prescribed inhaler","Loosen clothing","Stay calm"],
+        "medications":[{"name":"Salbutamol inhaler","dose":"2 puffs every 4–6 hours","note":"Reliever"},{"name":"Montelukast","dose":"10mg once daily","note":"Preventive — prescription required"}],
+        "home_remedies":["Steam inhalation","Pursed lip breathing","Warm ginger tea","Sleep with head elevated"],
+        "when_to_see":"IMMEDIATE if severe breathing difficulty, bluish lips, or cannot speak full sentences",
+        "red_flags":["Severe breathlessness","Bluish lips","Cannot complete sentence","Chest pain + arm/jaw pain"],
+    },
+    "back|spine|lower back|lumbar|backache": {
+        "condition":"Back Pain / Musculoskeletal","urgency":"mild",
+        "precautions":["Rest 1–2 days then gentle movement","Ice first 48h then heat","Good posture","Avoid heavy lifting"],
+        "medications":[{"name":"Ibuprofen","dose":"400mg every 6–8 hours with food","note":"Anti-inflammatory"},{"name":"Paracetamol","dose":"500mg–1g every 4–6 hours","note":"Pain relief"},{"name":"Diclofenac gel","dose":"Apply 3–4x daily","note":"Topical relief"}],
+        "home_remedies":["Alternating hot/cold compress","Turmeric milk","Gentle yoga","Epsom salt bath"],
+        "when_to_see":"Pain radiating to leg, numbness, bladder/bowel changes, or after injury",
+        "red_flags":["Pain shooting down leg","Numbness in legs","Bladder/bowel problems","After injury"],
+    },
+    "skin|rash|itch|hives|allergy|allergic": {
+        "condition":"Skin Rash / Allergic Reaction","urgency":"moderate",
+        "precautions":["Do not scratch","Avoid trigger","Loose cotton clothing","Moisturise skin","Lukewarm showers"],
+        "medications":[{"name":"Cetirizine","dose":"10mg once daily","note":"Antihistamine"},{"name":"Loratadine","dose":"10mg once daily","note":"Non-drowsy"},{"name":"1% Hydrocortisone cream","dose":"Apply thinly 2x daily","note":"Localised itch"},{"name":"Calamine lotion","dose":"Apply as needed","note":"Soothing"}],
+        "home_remedies":["Cold compress","Aloe vera gel","Oatmeal bath","Coconut oil"],
+        "when_to_see":"Throat swelling, difficulty breathing, rapidly spreading rash, or rash + fever",
+        "red_flags":["Throat swelling","Difficulty breathing (anaphylaxis)","Rapidly spreading rash","Rash + fever"],
+    },
+    "anxiety|stress|panic|depressed|depression|sleep|insomnia|mental": {
+        "condition":"Mental Health / Stress / Anxiety","urgency":"moderate",
+        "precautions":["Deep breathing exercises","Consistent sleep schedule","Reduce caffeine","Exercise 30 min daily","Reach out to someone trusted"],
+        "medications":[{"name":"Ashwagandha","dose":"300–600mg daily","note":"Natural adaptogen"},{"name":"Melatonin","dose":"0.5–5mg at bedtime","note":"For sleep"},{"name":"⚠️ Note","dose":"","note":"Psychiatric medications require doctor prescription"}],
+        "home_remedies":["10-min daily meditation","Gratitude journaling","Progressive muscle relaxation","Lavender oil","Yoga"],
+        "when_to_see":"Hopelessness > 2 weeks, thoughts of self-harm, or severe panic attacks",
+        "red_flags":["Thoughts of self-harm or suicide","Unable to perform daily tasks","Severe panic attacks"],
+    },
+    "diabetes|blood sugar|glucose|sugar level": {
+        "condition":"Diabetes Management","urgency":"moderate",
+        "precautions":["Monitor blood glucose regularly","Follow low-sugar, low-carb diet","Never skip meals","Exercise 30 minutes daily","Stay hydrated"],
+        "medications":[{"name":"Metformin","dose":"500–1000mg with meals","note":"Prescribed — do not self-start"},{"name":"Glucose tablets","dose":"15–20g if blood sugar < 4 mmol/L","note":"For hypoglycaemia"}],
+        "home_remedies":["Bitter melon (karela) juice","Fenugreek seeds soaked overnight","Cinnamon in warm water","Regular brisk walking"],
+        "when_to_see":"Blood sugar above 15 mmol/L, hypoglycaemia symptoms, or new symptoms",
+        "red_flags":["Blood sugar > 15 mmol/L","Severe hypoglycaemia (shaking, confusion)","Fruity breath (ketoacidosis)"],
+    },
+    "blood pressure|hypertension|bp|high bp": {
+        "condition":"High Blood Pressure","urgency":"moderate",
+        "precautions":["Reduce salt < 5g/day","Avoid alcohol and smoking","Exercise regularly","Manage stress","Monitor BP daily","Maintain healthy weight"],
+        "medications":[{"name":"Amlodipine","dose":"5–10mg once daily","note":"Prescribed"},{"name":"Lisinopril","dose":"5–40mg once daily","note":"Prescribed"}],
+        "home_remedies":["DASH diet","Garlic supplement","Hibiscus tea","Deep breathing exercises"],
+        "when_to_see":"BP above 180/120 mmHg, chest pain, or sudden severe headache",
+        "red_flags":["BP > 180/120 mmHg","Chest pain + high BP","Sudden severe headache","Vision changes"],
+    },
+}
+
+EMERGENCY_KW_INTEGRATED = [
+    "chest pain","can't breathe","cannot breathe","unconscious","fainted","collapsed",
+    "stroke","heart attack","suicidal","overdose","seizure","fitting","throat closing","choking",
+]
+
+URGENCY_ADVICE_INTEGRATED = {
+    "mild":      {"emoji":"🟢","label":"Non-urgent",          "color":"#4CAF82","advice":"Symptoms appear mild. Monitor at home and follow precautions below."},
+    "moderate":  {"emoji":"🟡","label":"See a doctor soon",   "color":"#F5A623","advice":"Consult a doctor within 24–48 hours if symptoms don't improve."},
+    "high":      {"emoji":"🔴","label":"Seek care today",     "color":"#F47B7B","advice":"See a doctor today or visit an urgent care centre."},
+    "emergency": {"emoji":"🚨","label":"Go to Emergency NOW", "color":"#ef4444","advice":"Call 999/911 or go to A&E immediately."},
+}
+
+def _analyse_symptoms(text: str, severity: str, age: int, allergies: list) -> dict:
+    tl = text.lower()
+    if any(k in tl for k in EMERGENCY_KW_INTEGRATED):
+        return {"condition":"Potential Medical Emergency","urgency":"emergency",
+                "precautions":["Call emergency services (999/911) immediately","Keep person calm","Do not give food/water"],
+                "medications":[],"home_remedies":[],"when_to_see":"GO TO EMERGENCY NOW",
+                "red_flags":["Requires immediate emergency care"]}
+    best, best_score = None, 0
+    for kws, data in SYMPTOM_DB_INTEGRATED.items():
+        score = sum(1 for k in kws.split("|") if k in tl)
+        if score > best_score:
+            best_score = score; best = data
+    if not best:
+        best = {"condition":"General Health Concern","urgency":"moderate",
+                "precautions":["Rest and stay hydrated","Monitor symptoms 24–48 hours"],
+                "medications":[{"name":"Paracetamol","dose":"500mg as needed","note":"For pain/fever"}],
+                "home_remedies":["Rest","Hydration"],"when_to_see":"If symptoms worsen or persist > 48 hours",
+                "red_flags":["Worsening symptoms","High fever","Difficulty breathing"]}
+    urgency = best["urgency"]
+    if severity == "severe" and urgency == "mild":     urgency = "moderate"
+    if severity == "severe" and urgency == "moderate": urgency = "high"
+    if (age < 5 or age > 70) and urgency == "mild":   urgency = "moderate"
+    meds = []
+    for m in best["medications"]:
+        mc = dict(m)
+        if any(a.lower() in m["name"].lower() for a in allergies if a):
+            mc["warning"] = f"⚠️ ALLERGY ALERT — check with doctor before taking"
+        meds.append(mc)
+    return {**best, "urgency": urgency, "medications": meds}
+
+@api_router.post("/portal/symptom-check")
+async def symptom_check(data: SymptomCheckIn, cu=Depends(get_current_user)):
+    result = _analyse_symptoms(data.symptoms, data.severity, data.age, data.allergies)
+    doc = {
+        "_id":          new_id(),
+        "user_id":      cu["_id"],
+        "patient_name": cu["name"],
+        "symptoms":     data.symptoms,
+        "severity":     data.severity,
+        "duration":     data.duration,
+        "age":          data.age,
+        "gender":       data.gender,
+        "result":       result,
+        "created_at":   now_iso(),
+    }
+    await db.symptom_checks.insert_one(doc)
+    await audit(cu["_id"], "SYMPTOM_CHECK", "portal", f"AI check: {result['condition']}")
+    return {
+        **result,
+        "check_id":    doc["_id"],
+        "urgency_info": URGENCY_ADVICE_INTEGRATED.get(result["urgency"], {}),
+    }
+
+@api_router.get("/portal/symptom-history")
+async def symptom_history(cu=Depends(get_current_user)):
+    docs = await db.symptom_checks.find({"user_id": cu["_id"]}).sort("created_at", -1).limit(10).to_list(10)
+    return fix_ids(docs)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MEDICINE DATABASE — Full medicine info with variants, home remedies, etc.
+# ══════════════════════════════════════════════════════════════════════════════
+
+@api_router.get("/medicine-db/list")
+async def list_medicine_db(
+    search: str = "", category: str = "", symptom: str = "",
+    page: int = 1, limit: int = 20,
+    cu=Depends(get_current_user)
+):
+    """List medicines from the comprehensive medicine database collection."""
+    query = {"isActive": True}
+    if category:
+        query["category"] = {"$regex": category, "$options": "i"}
+    if search:
+        query["$or"] = [
+            {"name":       {"$regex": search, "$options": "i"}},
+            {"brandNames": {"$regex": search, "$options": "i"}},
+            {"uses":       {"$regex": search, "$options": "i"}},
+            {"symptoms":   {"$regex": search, "$options": "i"}},
+            {"diseases":   {"$regex": search, "$options": "i"}},
+        ]
+    if symptom:
+        query["$or"] = [
+            {"symptoms": {"$regex": symptom, "$options": "i"}},
+            {"diseases": {"$regex": symptom, "$options": "i"}},
+            {"uses":     {"$regex": symptom, "$options": "i"}},
+        ]
+    total = await db.medicine_db.count_documents(query)
+    docs  = await db.medicine_db.find(query).skip((page-1)*limit).limit(limit).sort("name", 1).to_list(limit)
+    return {"total": total, "page": page, "pages": max(1, -(-total//limit)), "data": fix_ids(docs)}
+
+@api_router.get("/medicine-db/categories")
+async def medicine_db_categories(cu=Depends(get_current_user)):
+    cats = await db.medicine_db.distinct("category")
+    return {"data": sorted([c for c in cats if c])}
+
+@api_router.get("/medicine-db/{mid}")
+async def get_medicine_db(mid: str, cu=Depends(get_current_user)):
+    doc = await db.medicine_db.find_one({"_id": mid})
+    if not doc: raise HTTPException(404, "Medicine not found")
+    return fix_id(doc)
+
+@api_router.post("/medicine-db/symptom-search")
+async def medicine_symptom_search(body: dict, cu=Depends(get_current_user)):
+    """Search medicines by symptom or disease and also return home remedies."""
+    query_str = body.get("query", "").strip()
+    if not query_str or len(query_str) < 2:
+        raise HTTPException(400, "Query too short")
+    regex = {"$regex": query_str, "$options": "i"}
+    meds = await db.medicine_db.find({
+        "isActive": True,
+        "$or": [
+            {"symptoms": regex}, {"diseases": regex},
+            {"uses": regex}, {"name": regex},
+            {"brandNames": regex}, {"tags": regex},
+        ]
+    }).limit(15).to_list(15)
+
+    home_remedies = []
+    for med in meds:
+        for hr in med.get("homeRemedies", []):
+            if query_str.lower() in (hr.get("symptom", "") + hr.get("remedy", "")).lower():
+                home_remedies.append(hr)
+
+    # Log the search
+    await db.medicine_searches.insert_one({
+        "_id": new_id(), "user_id": cu["_id"],
+        "query": query_str, "result_count": len(meds), "created_at": now_iso()
+    })
+
+    return {
+        "query": query_str, "medicines": fix_ids(meds),
+        "homeRemedies": home_remedies, "total": len(meds),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Mount API router
+# ══════════════════════════════════════════════════════════════════════════════
 app.include_router(api_router)

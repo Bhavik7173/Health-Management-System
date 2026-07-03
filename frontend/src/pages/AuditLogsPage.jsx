@@ -19,16 +19,6 @@ const ACTION_ICONS = {
   APPOINTMENT_BOOKED:"📅",
 };
 
-const MOCK_LOGS = [
-  {id:"1",user:{name:"Dr. Lida Gutierrez",role:"doctor"},action:"LOGIN",resource:"auth",detail:"Successful login from 192.168.1.1",ip:"192.168.1.1",timestamp:"2026-05-23T09:14:32"},
-  {id:"2",user:{name:"Admin User",role:"admin"},action:"MFA_ENABLED",resource:"users",detail:"MFA activated",ip:"192.168.1.2",timestamp:"2026-05-23T09:10:11"},
-  {id:"3",user:{name:"Dr. Mayme Gomez",role:"radiologist"},action:"CREATE",resource:"scans",detail:"Uploaded X-Ray for Sarah Johnson",ip:"10.0.0.3",timestamp:"2026-05-23T08:55:00"},
-  {id:"4",user:{name:"Unknown",role:"—"},action:"LOGIN_FAILED",resource:"auth",detail:"Failed login for attacker@evil.com",ip:"203.0.113.5",timestamp:"2026-05-23T08:30:44"},
-  {id:"5",user:{name:"Admin User",role:"admin"},action:"USER_DEACTIVATED",resource:"users",detail:"Deactivated user xyz123",ip:"192.168.1.2",timestamp:"2026-05-22T17:00:00"},
-  {id:"6",user:{name:"Dr. Christina Frazier",role:"doctor"},action:"UPDATE",resource:"patients",detail:"Updated patient Sarah Johnson",ip:"10.0.0.4",timestamp:"2026-05-22T14:22:10"},
-  {id:"7",user:{name:"Lab Tech",role:"lab_tech"},action:"CREATE",resource:"labs",detail:"Added CBC result for James Lee",ip:"10.0.0.5",timestamp:"2026-05-22T11:08:33"},
-  {id:"8",user:{name:"Dr. Lida Gutierrez",role:"doctor"},action:"LOGOUT",resource:"auth",detail:"User logged out",ip:"192.168.1.1",timestamp:"2026-05-22T09:00:00"},
-];
 
 export default function AuditLogsPage() {
   const [logs,    setLogs]    = useState([]);

@@ -54,53 +54,6 @@ const STATUS_COL = {
 };
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
-const MOCK_REPORTS = [
-  {
-    id:"r1", report_number:"RPT-20260520-A1B2C3",
-    patient_name:"Sarah Johnson", patient_dob:"1985-03-12", patient_gender:"Female", patient_id:"P-001",
-    scan_type:"xray", scan_date:"2026-05-20", referring_doctor:"Dr. Lida Gutierrez",
-    radiologist:"Dr. Mayme Gomez", institution:"MediCore AI Hospital",
-    clinical_history:"Cough, fever for 3 days. Rule out pneumonia.",
-    technique:"PA and lateral chest radiographs obtained.",
-    findings:"Right lower lobe consolidation present. No pleural effusion. Heart size normal. Mediastinum not widened.",
-    impression:"Right lower lobe pneumonia.",
-    recommendation:"Clinical correlation recommended. Follow up CXR in 4-6 weeks after treatment.",
-    diagnosis:"Pneumonia", severity:"abnormal", confidence:0.94,
-    template:"chest_xray", status:"signed", ai_generated:true,
-    author_name:"Dr. Mayme Gomez", author_role:"radiologist",
-    signed_by:"Dr. Mayme Gomez", signed_at:"2026-05-20T14:30:00",
-    signature_date:"2026-05-20", created_at:"2026-05-20T10:00:00",
-  },
-  {
-    id:"r2", report_number:"RPT-20260519-D4E5F6",
-    patient_name:"James Lee", patient_dob:"1972-07-25", patient_gender:"Male", patient_id:"P-002",
-    scan_type:"mri", scan_date:"2026-05-19", referring_doctor:"Dr. Christina Frazier",
-    radiologist:"Dr. Mayme Gomez", institution:"MediCore AI Hospital",
-    clinical_history:"Persistent headaches, visual disturbances x 3 weeks.",
-    technique:"MRI brain with and without gadolinium contrast.",
-    findings:"4.2cm heterogeneous mass in left temporal lobe with surrounding oedema. Enhancement post-contrast. Mass effect on adjacent structures.",
-    impression:"Large enhancing mass in left temporal lobe. Differential includes high-grade glioma.",
-    recommendation:"Urgent neurosurgical referral. Tissue biopsy for histological confirmation.",
-    diagnosis:"Brain Tumor", severity:"critical", confidence:0.97,
-    template:"mri_brain", status:"signed", ai_generated:true,
-    author_name:"Dr. Mayme Gomez", author_role:"radiologist",
-    signed_by:"Dr. Mayme Gomez", signed_at:"2026-05-19T16:00:00",
-    signature_date:"2026-05-19", created_at:"2026-05-19T11:00:00",
-  },
-  {
-    id:"r3", report_number:"RPT-20260518-G7H8I9",
-    patient_name:"Maria Garcia", scan_type:"ct", scan_date:"2026-05-18",
-    referring_doctor:"Dr. Mayme Gomez", radiologist:"Dr. Mayme Gomez",
-    institution:"MediCore AI Hospital",
-    clinical_history:"Routine follow-up. Known mild asthma.",
-    technique:"CT chest without contrast.", findings:"Lungs clear bilaterally. No consolidation, effusion, or pneumothorax.",
-    impression:"Normal CT chest.", recommendation:"No further imaging required at this time.",
-    diagnosis:"Normal", severity:"normal", confidence:0.91,
-    template:"standard", status:"draft", ai_generated:false,
-    author_name:"Dr. Mayme Gomez", author_role:"radiologist",
-    created_at:"2026-05-18T09:00:00",
-  },
-];
 
 // ── PDF Generator ─────────────────────────────────────────────────────────────
 function printReport(report) {
