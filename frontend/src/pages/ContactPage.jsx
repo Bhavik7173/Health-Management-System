@@ -14,6 +14,45 @@ export default function ContactPage() {
   const [draft,    setDraft]    = useState("");
   const [search,   setSearch]   = useState("");
   const bottomRef               = useRef(null);
+  const ws                      = useRef(null);
+
+  // WebSocket Connection
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/ws/${user.id}`;
+
+    const connect = () => {
+      ws.current = new WebSocket(wsUrl);
+
+      ws.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_message") {
+          const { from_id, ...msg } = data.message;
+          setMessages(prev => ({
+            ...prev,
+            [from_id]: [...(prev[from_id] || []), msg]
+          }));
+
+          // Also update contact list last message
+          setContacts(prev => prev.map(c =>
+            c.id === from_id ? { ...c, lastMsg: msg.text, time: msg.time, unread: (active?.id === from_id ? c.unread : (c.unread || 0) + 1) } : c
+          ));
+        }
+      };
+
+      ws.current.onclose = () => {
+        setTimeout(connect, 3000); // Reconnect after 3 seconds
+      };
+    };
+
+    connect();
+    return () => {
+      if (ws.current) ws.current.close();
+    };
+  }, [user?.id, active?.id]);
 
   // Load contacts
   useEffect(() => {
@@ -49,8 +88,15 @@ export default function ContactPage() {
 
   const send = async () => {
     if (!draft.trim() || !active) return;
-    const newMsg = { from: "me", text: draft.trim(), time: new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }) };
+    const time = new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+    const newMsg = { from: "me", text: draft.trim(), time };
     setMessages(prev => ({ ...prev, [active.id]: [...(prev[active.id] || []), newMsg] }));
+
+    // Update contact list last message
+    setContacts(prev => prev.map(c =>
+      c.id === active.id ? { ...c, lastMsg: newMsg.text, time } : c
+    ));
+
     setDraft("");
     try { await messageService.send(active.id, newMsg.text); } catch { /* keep optimistic */ }
   };
