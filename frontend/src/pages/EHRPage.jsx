@@ -612,9 +612,33 @@ function Modal({ title, onClose, children }) {
 }
 
 function TextArea({ label, value, onChange, placeholder, rows=3, highlight }) {
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleListen = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Speech recognition not supported in this browser.");
+      return;
+    }
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      onChange((value || "") + " " + text);
+    };
+    recognition.start();
+  };
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:5}}>
-      <label style={{fontSize:12,color:C.textLight,fontWeight:600,letterSpacing:"0.05em"}}>{label}</label>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <label style={{fontSize:12,color:C.textLight,fontWeight:600,letterSpacing:"0.05em"}}>{label}</label>
+        <button onClick={toggleListen} title="Voice Dictation"
+          style={{ background: isListening ? C.coral : "none", border: `1px solid ${C.border}`, borderRadius: 8, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+          {isListening ? "🛑" : "🎤"}
+        </button>
+      </div>
       <textarea value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
         style={{background:highlight?C.accentLight+"66":C.cardAlt,border:`1.5px solid ${highlight?C.accent:C.border}`,borderRadius:12,padding:"12px 14px",fontSize:13,color:C.text,outline:"none",resize:"vertical",fontFamily:"Nunito,sans-serif",lineHeight:1.6}}/>
     </div>

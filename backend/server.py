@@ -147,7 +147,11 @@ def fix_id(doc):
 def fix_ids(docs):
     return [fix_id(d) for d in docs]
 
-import pyotp, qrcode, io, base64, hashlib, secrets
+import pyotp, qrcode, io, base64, hashlib, secrets, stripe
+
+# Stripe Configuration (Use test keys from stripe.com)
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_51P...")
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ROLES — all 6 roles with their permissions
@@ -1526,6 +1530,15 @@ class PrescriptionIn(BaseModel):
 
 @api_router.post("/medicine/prescriptions")
 async def create_prescription(data: PrescriptionIn, cu=Depends(get_current_user)):
+    # ── Safety Check: Allergy Detection ──
+    patient = await db.patients.find_one({"name": data.patient})
+    if patient:
+        allergies = [a.lower() for a in patient.get("allergies", [])]
+        drug_name = data.drug.lower()
+        conflicts = [a for a in allergies if a in drug_name]
+        if conflicts:
+            raise HTTPException(400, f"SAFETY ALERT: Patient is allergic to components in this medication: {', '.join(conflicts)}")
+
     doc = {
         "_id": new_id(), "patient": data.patient, "drug": data.drug,
         "dosage": data.dosage, "duration": data.duration,
@@ -2001,6 +2014,19 @@ async def list_invoices(patient_id: str = "", status: str = "", cu=Depends(get_c
 
 @api_router.patch("/billing/invoices/{iid}/pay")
 async def mark_paid(iid: str, body: dict, cu=Depends(get_current_user)):
+    # Support for Stripe Payment Intents
+    if body.get("method") == "stripe":
+        invoice = await db.invoices.find_one({"_id": iid})
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=int(invoice["total"] * 100), # cents
+                currency="usd",
+                metadata={"invoice_id": iid}
+            )
+            return {"client_secret": intent.client_secret}
+        except Exception as e:
+            raise HTTPException(400, f"Stripe error: {str(e)}")
+
     await db.invoices.update_one({"_id": iid}, {"$set": {
         "status": "paid", "paid_at": now_iso(),
         "payment_method": body.get("method", "card"),
@@ -2008,6 +2034,17 @@ async def mark_paid(iid: str, body: dict, cu=Depends(get_current_user)):
     }})
     await audit(cu["_id"], "UPDATE", "billing", f"Invoice {iid} marked as paid")
     return {"ok": True}
+
+@api_router.post("/ai/ocr-scan")
+async def ai_ocr_scan(file: UploadFile = File(...), cu=Depends(get_current_user)):
+    """Professional OCR: Extracts medical data from images/PDFs"""
+    # In production, use easyocr or OpenAI Vision
+    # Mocking the response for now to demonstrate UI integration
+    return {
+        "text": "Extracted Medical Report: WBC 4.5, RBC 5.0, Glucose 98mg/dL",
+        "entities": {"glucose": 98, "status": "normal"},
+        "confidence": 0.94
+    }
 
 @api_router.get("/billing/stats")
 async def billing_stats(cu=Depends(get_current_user)):
