@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
@@ -31,6 +31,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── WebSocket Manager ─────────────────────────────────────────────────────────
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, WebSocket] = {}
+
+    async def connect(self, user_id: str, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+
+    def disconnect(self, user_id: str):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+
+    async def send_personal_message(self, message: dict, user_id: str):
+        if user_id in self.active_connections:
+            await self.active_connections[user_id].send_json(message)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections.values():
+            await connection.send_json(message)
+
+manager = ConnectionManager()
 
 # ── Global handler: catch unhandled MongoDB connection errors ──────────────────
 @app.exception_handler(ServerSelectionTimeoutError)
@@ -1609,6 +1632,16 @@ class MessageIn(BaseModel):
     contact_id: str
     text:       str
 
+@api_router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    await manager.connect(user_id, websocket)
+    try:
+        while True:
+            # Keep the connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(user_id)
+
 @api_router.get("/messages/contacts")
 async def get_contacts(cu=Depends(get_current_user)):
     users = await db.users.find({"_id": {"$ne": cu["_id"]}}, {"password":0}).to_list(50)
@@ -1646,9 +1679,24 @@ async def get_thread(contact_id: str, cu=Depends(get_current_user)):
 
 @api_router.post("/messages/send")
 async def send_message(data: MessageIn, cu=Depends(get_current_user)):
-    doc = {"_id": new_id(), "from_id": cu["_id"], "to_id": data.contact_id,
-           "text": data.text, "read": False, "created_at": now_iso()}
+    msg_id = new_id()
+    created_at = now_iso()
+    doc = {"_id": msg_id, "from_id": cu["_id"], "to_id": data.contact_id,
+           "text": data.text, "read": False, "created_at": created_at}
     await db.messages.insert_one(doc)
+
+    # Send real-time notification via WebSocket
+    message_payload = {
+        "type": "new_message",
+        "message": {
+            "from": "other",
+            "text": data.text,
+            "time": created_at[11:16],
+            "from_id": cu["_id"]
+        }
+    }
+    await manager.send_personal_message(message_payload, data.contact_id)
+
     return {"ok": True}
 
 # ══════════════════════════════════════════════════════════════════════════════
