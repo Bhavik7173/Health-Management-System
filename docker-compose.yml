@@ -5,12 +5,12 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
-    # We remove the interpolation to force the correct internal address
+    env_file:
+      - ./backend/.env
     environment:
-      - MONGO_URL=mongodb://mongodb:27017
-      - DB_NAME=medicore
-    depends_on:
-      - mongodb
+      - MONGO_URL=${MONGO_URL}
+      - DB_NAME=${DB_NAME}
+    # We no longer need 'depends_on: mongodb' because the DB is now in the cloud
 
   frontend:
     build: ./frontend
@@ -19,12 +19,4 @@ services:
     depends_on:
       - backend
 
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
-volumes:
-  mongodb_data:
+# We can remove the local mongodb service entirely to save AWS memory/CPU
