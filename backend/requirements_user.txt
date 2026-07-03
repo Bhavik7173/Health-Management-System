@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+motor
+pydantic[email]
+python-jose[cryptography]
+python-multipart
+python-dotenv
+bcrypt
+pyotp
+qrcode[pil]
