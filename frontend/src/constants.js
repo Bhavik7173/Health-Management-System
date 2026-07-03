@@ -1,13 +1,13 @@
 export const C = {
-  bg: "#f0f4f0", card: "#ffffff", cardAlt: "#f7f9f7",
-  accent: "#4CAF82", accentLight: "#e8f5ee",
-  blue: "#5B8DEF", blueLight: "#EEF3FD",
-  coral: "#F47B7B", coralLight: "#FEF0F0",
-  amber: "#F5A623", amberLight: "#FEF9EE",
-  text: "#1a1a2e", textMed: "#4a5568", textLight: "#94a3b8",
-  border: "#e8eef0",
-  shadow: "0 4px 24px rgba(0,0,0,0.06)",
-  shadowHover: "0 8px 32px rgba(0,0,0,0.10)",
+  bg: "var(--bg)", card: "var(--card)", cardAlt: "var(--card-alt)",
+  accent: "var(--accent)", accentLight: "var(--accent-light)",
+  blue: "var(--blue)", blueLight: "var(--blue-light)",
+  coral: "var(--coral)", coralLight: "var(--coral-light)",
+  amber: "var(--amber)", amberLight: "var(--amber-light)",
+  text: "var(--text)", textMed: "var(--text-med)", textLight: "var(--text-light)",
+  border: "var(--border)",
+  shadow: "var(--shadow)",
+  shadowHover: "var(--shadow-hover)",
 };
 
 export const statusColor = {

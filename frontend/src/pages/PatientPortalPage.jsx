@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
-import { C } from "../constants";
+import { useState, useEffect, useRef } from "react";
+import { C, roleColor } from "../constants";
 import { Card, Btn, Badge, Avatar, StatCard, TabBar, Spinner } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
-import { portalService, billingService, telemedicineService } from "../services/api";
+import { portalService, billingService, telemedicineService, messageService } from "../services/api";
 
 // ── colour maps ───────────────────────────────────────────────────────────────
 const STATUS_COL = { confirmed:C.accent, pending:C.blue, cancelled:C.coral, completed:"#8b5cf6" };
 const SEV_COL    = { normal:C.accent, abnormal:C.amber, critical:C.coral };
 const PAY_COL    = { paid:C.accent, unpaid:C.coral, overdue:"#ef4444", partial:C.amber };
+const statusBadge = { online: C.accent, busy: C.amber, offline: C.textLight };
 
 // ── seed fallback data ────────────────────────────────────────────────────────
 const SEED_PROFILE = {
@@ -116,6 +117,82 @@ export default function PatientPortalPage() {
   const [payMethod,    setPayMethod]    = useState("card");
   const [apptForm,     setApptForm]     = useState({ doctor:"", date:"", time:"09:00", type:"Consultation", notes:"" });
   const [teleForm,     setTeleForm]     = useState({ doctor_name:"", type:"video", scheduled_at:"", duration_mins:30, notes:"" });
+
+  // ── Messaging State ──
+  const [contacts, setContacts] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState({});
+  const [chatDraft, setChatDraft] = useState("");
+  const chatBottomRef = useRef(null);
+  const ws = useRef(null);
+
+  // WebSocket Connection
+  useEffect(() => {
+    if (!user?.id || tab !== "messages") return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/ws/${user.id}`;
+
+    const connect = () => {
+      ws.current = new WebSocket(wsUrl);
+      ws.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_message") {
+          const { from_id, ...msg } = data.message;
+          setChatMessages(prev => ({
+            ...prev,
+            [from_id]: [...(prev[from_id] || []), msg]
+          }));
+          setContacts(prev => prev.map(c =>
+            c.id === from_id ? { ...c, lastMsg: msg.text, time: msg.time, unread: (activeChat?.id === from_id ? c.unread : (c.unread || 0) + 1) } : c
+          ));
+        }
+      };
+      ws.current.onclose = () => { if (tab === "messages") setTimeout(connect, 3000); };
+    };
+
+    connect();
+    return () => { if (ws.current) ws.current.close(); };
+  }, [user?.id, tab, activeChat?.id]);
+
+  // Load chat data
+  useEffect(() => {
+    if (tab === "messages") {
+      messageService.getContacts().then(data => {
+        const mapped = (data || []).map(c => ({
+          ...c,
+          avatar: c.name?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "?",
+          color:  roleColor[c.role] || C.blue,
+          specialty: c.role,
+        }));
+        setContacts(mapped);
+        if (mapped.length && !activeChat) setActiveChat(mapped[0]);
+      });
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    if (activeChat?.id) {
+      messageService.getThread(activeChat.id).then(msgs => {
+        setChatMessages(prev => ({ ...prev, [activeChat.id]: msgs || [] }));
+      });
+    }
+  }, [activeChat?.id]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeChat, chatMessages]);
+
+  const sendChatMessage = async () => {
+    if (!chatDraft.trim() || !activeChat) return;
+    const time = new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+    const newMsg = { from: "me", text: chatDraft.trim(), time };
+    setChatMessages(prev => ({ ...prev, [activeChat.id]: [...(prev[activeChat.id] || []), newMsg] }));
+    setContacts(prev => prev.map(c => c.id === activeChat.id ? { ...c, lastMsg: newMsg.text, time } : c));
+    setChatDraft("");
+    try { await messageService.send(activeChat.id, newMsg.text); } catch {}
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -391,6 +468,7 @@ export default function PatientPortalPage() {
           ["reports","🔬 Reports"],
           ["billing","💳 Billing"],
           ["telemedicine","📹 Telemedicine"],
+          ["messages","💬 Messages"],
         ]}
         active={tab}
         onChange={setTab}
@@ -636,6 +714,61 @@ export default function PatientPortalPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* ══ MESSAGES ══ */}
+      {tab === "messages" && (
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: 500 }}>
+          <Card style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700, color: C.textLight }}>Select Staff</div>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {contacts.map(c => (
+                <div key={c.id} onClick={() => setActiveChat(c)}
+                  style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 14px", cursor: "pointer", background: activeChat?.id === c.id ? C.accentLight : "transparent", borderBottom: `1px solid ${C.border}` }}>
+                  <Avatar initials={c.avatar} color={c.color} size={36} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: C.textLight }}>{c.specialty}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            {activeChat ? (
+              <>
+                <div style={{ padding: "12px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+                  <Avatar initials={activeChat.avatar} color={activeChat.color} size={36} />
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{activeChat.name}</div>
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 10, background: C.cardAlt }}>
+                  {(chatMessages[activeChat.id] || []).map((msg, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
+                      <div style={{
+                        maxWidth: "80%", padding: "8px 12px", borderRadius: 12, fontSize: 13,
+                        background: msg.from === "me" ? C.accent : "#fff",
+                        color: msg.from === "me" ? "#fff" : C.text,
+                        boxShadow: C.shadow,
+                      }}>
+                        {msg.text}
+                        <div style={{ fontSize: 9, opacity: 0.7, marginTop: 4, textAlign: "right" }}>{msg.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={chatBottomRef} />
+                </div>
+                <div style={{ padding: "12px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 8 }}>
+                  <input value={chatDraft} onChange={e => setChatDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChatMessage()}
+                    placeholder="Type your message…" style={{ ...inputSt, flex: 1 }} />
+                  <Btn onClick={sendChatMessage} disabled={!chatDraft.trim()} style={{ borderRadius: 10, padding: "0 16px" }}>➤</Btn>
+                </div>
+              </>
+            ) : (
+              <EmptyState icon="💬" text="Select staff to chat" />
+            )}
+          </Card>
         </div>
       )}
     </div>

@@ -14,6 +14,18 @@
   --shadow-hover: 0 8px 32px rgba(0,0,0,0.10);
 }
 
+.dark-mode {
+  --bg: #0f172a; --card: #1e293b; --card-alt: #334155;
+  --accent: #4CAF82; --accent-light: #064e3b;
+  --blue: #3b82f6; --blue-light: #1e3a8a;
+  --coral: #ef4444; --coral-light: #7f1d1d;
+  --amber: #f59e0b; --amber-light: #78350f;
+  --text: #f8fafc; --text-med: #cbd5e1; --text-light: #94a3b8;
+  --border: #334155;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --shadow-hover: 0 8px 32px rgba(0,0,0,0.4);
+}
+
 body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font-family: 'Nunito', sans-serif; }
 input::placeholder, textarea::placeholder { color: #c4cdd6; }

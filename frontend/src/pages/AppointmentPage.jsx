@@ -163,7 +163,9 @@ export default function AppointmentPage() {
   const sendReminder = async (appt, channel) => {
     import("../services/api").then(({appointmentService:as})=>{
       as.sendReminder?.(appt.id,{
-        appointment_id:appt.id, patient_name:appt.patient,
+        appointment_id:appt.id,
+        patient_name:appt.patient,
+        patient_user_id:appt.patient_user_id,
         patient_email:`${appt.patient.toLowerCase().replace(" ",".")}@email.com`,
         patient_phone:"+1 234 567 8900",
         doctor:appt.doctor, date:appt.date, time:appt.time, type:appt.type, channel,

@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { C, roleColor } from "../constants";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import MfaSetup from "./MfaSetup";
 
 // ── Design tokens matching the HavenMed wide sidebar ─────────────────────────
 const S = {
-  bg:       "#FFFFFF",
-  active:   "#EDE9FB",
-  activeText:"#7C6FD4",
-  text:     "#374151",
-  textLight:"#9CA3AF",
-  border:   "#F3F4F6",
-  accent:   "#7C6FD4",
+  bg:       "var(--card)",
+  active:   "var(--accent-light)",
+  activeText:"var(--accent)",
+  text:     "var(--text)",
+  textLight:"var(--text-light)",
+  border:   "var(--border)",
+  accent:   "var(--accent)",
   dot:      "#4CAF82",
 };
 
@@ -40,6 +41,9 @@ const ROLE_NAV = {
       { id:"resources",    icon:"❓", label:"Help Center"  },
       { id:"reports",      icon:"🚩", label:"Report"      },
     ]},
+    { group:"Preferences", items:[
+      { id:"settings",     icon:"⚙️",  label:"Settings"    },
+    ]},
   ],
   doctor: [
     { group:"Main Menu", items:[
@@ -57,6 +61,9 @@ const ROLE_NAV = {
       { id:"contact",      icon:"💬", label:"Chat"        },
       { id:"symptoms",     icon:"🧠", label:"AI Check"    },
     ]},
+    { group:"Preferences", items:[
+      { id:"settings",     icon:"⚙️",  label:"Settings"    },
+    ]},
   ],
   radiologist: [
     { group:"Main Menu", items:[
@@ -71,6 +78,9 @@ const ROLE_NAV = {
       { id:"contact",      icon:"💬", label:"Chat"        },
       { id:"symptoms",     icon:"🧠", label:"AI Check"    },
     ]},
+    { group:"Preferences", items:[
+      { id:"settings",     icon:"⚙️",  label:"Settings"    },
+    ]},
   ],
   lab_tech: [
     { group:"Main Menu", items:[
@@ -82,6 +92,9 @@ const ROLE_NAV = {
       { id:"analytics",    icon:"📊", label:"Analytics"   },
       { id:"contact",      icon:"💬", label:"Chat"        },
       { id:"symptoms",     icon:"🧠", label:"AI Check"    },
+    ]},
+    { group:"Preferences", items:[
+      { id:"settings",     icon:"⚙️",  label:"Settings"    },
     ]},
   ],
   receptionist: [
@@ -96,6 +109,9 @@ const ROLE_NAV = {
       { id:"contact",      icon:"💬", label:"Chat"        },
       { id:"symptoms",     icon:"🧠", label:"AI Check"    },
     ]},
+    { group:"Preferences", items:[
+      { id:"settings",     icon:"⚙️",  label:"Settings"    },
+    ]},
   ],
 };
 
@@ -106,9 +122,9 @@ const ROLE_LABELS = {
 
 export default function Sidebar({ page, setPage, userRole }) {
   const { user, logout } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [showMfa, setShowMfa] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
   const groups  = ROLE_NAV[userRole] || ROLE_NAV.doctor;
   const initials = user?.name?.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase() || "U";
@@ -165,10 +181,10 @@ export default function Sidebar({ page, setPage, userRole }) {
         {/* Dark mode toggle */}
         <div style={{ padding:"12px 20px", borderTop:`1px solid ${S.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:14 }}>🌙</span>
-            <span style={{ fontSize:12, fontWeight:600, color:S.text }}>Dark Mode</span>
+            <span style={{ fontSize:14 }}>{darkMode ? "☀️" : "🌙"}</span>
+            <span style={{ fontSize:12, fontWeight:600, color:S.text }}>{darkMode ? "Light Mode" : "Dark Mode"}</span>
           </div>
-          <button onClick={() => setDarkMode(!darkMode)} style={{
+          <button onClick={toggleDarkMode} style={{
             width:40, height:22, borderRadius:11, border:"none", cursor:"pointer",
             background: darkMode ? S.accent : S.border, position:"relative", transition:"background 0.2s", padding:0,
           }}>
@@ -197,7 +213,7 @@ export default function Sidebar({ page, setPage, userRole }) {
           </div>
 
           {showUserMenu && (
-            <div style={{ position:"absolute", bottom:80, left:10, right:10, background:"#fff", borderRadius:14, boxShadow:"0 8px 32px rgba(0,0,0,0.12)", border:`1px solid ${S.border}`, zIndex:200, overflow:"hidden" }}>
+            <div style={{ position:"absolute", bottom:80, left:10, right:10, background:"var(--card)", borderRadius:14, boxShadow:"0 8px 32px rgba(0,0,0,0.12)", border:`1px solid ${S.border}`, zIndex:200, overflow:"hidden" }}>
               <div style={{ padding:"12px 14px", borderBottom:`1px solid ${S.border}` }}>
                 <div style={{ fontSize:13, fontWeight:700, color:S.text }}>{user?.name}</div>
                 <div style={{ fontSize:11, color:S.textLight }}>{ROLE_LABELS[userRole]}</div>

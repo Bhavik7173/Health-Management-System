@@ -167,7 +167,7 @@ ROLE_PERMISSIONS = {
     "radiologist":  ["scans:read","scans:write","patients:read","reports:write","messages:*","analytics:read"],
     "lab_tech":     ["scans:read","scans:write","labs:write","patients:read","analytics:read"],
     "receptionist": ["patients:read","patients:write","appointments:read","appointments:write","billing:read","analytics:read"],
-    "patient":      ["own:read","appointments:own","prescriptions:own","reports:own"],
+    "patient":      ["own:read","appointments:own","prescriptions:own","reports:own","messages:*"],
 }
 
 def has_permission(role: str, perm: str) -> bool:
@@ -780,6 +780,7 @@ async def update_patient_status(pid: str, body: dict, cu=Depends(get_current_use
 # ══════════════════════════════════════════════════════════════════════════════
 class AppointmentIn(BaseModel):
     patient:   str
+    patient_user_id: str = ""
     doctor:    str
     doctorId:  str = ""
     avatar:    str = ""
@@ -802,6 +803,7 @@ async def create_appointment(data: AppointmentIn, cu=Depends(get_current_user)):
     doc = {
         "_id":      new_id(),
         "patient":  data.patient,
+        "patient_user_id": data.patient_user_id,
         "doctor":   data.doctor,
         "doctorId": data.doctorId,
         "avatar":   data.avatar,
@@ -889,17 +891,30 @@ async def send_reminder(aid: str, data: ReminderIn, cu=Depends(get_current_user)
                 f"Reminder sent to {data.patient_name} via {data.channel} for appt {aid}")
 
     # Create notification for patient if they have an account
-    patient_user = await db.users.find_one({"name": data.patient_name})
-    if patient_user:
+    # Try looking up by ID first, then by name
+    target_user = None
+    if data.patient_user_id:
+        target_user = await db.users.find_one({"_id": data.patient_user_id})
+    if not target_user:
+        target_user = await db.users.find_one({"name": data.patient_name})
+
+    if target_user:
         await db.notifications.insert_one({
             "_id":      new_id(),
-            "user_id":  patient_user["_id"],
+            "user_id":  target_user["_id"],
             "title":    "Appointment Reminder",
             "message":  reminder_doc["message"],
             "type":     "reminder",
             "read":     False,
             "created_at": now_iso(),
         })
+
+        # Also send via WebSocket if connected
+        await manager.send_personal_message({
+            "type": "notification",
+            "title": "Appointment Reminder",
+            "message": reminder_doc["message"]
+        }, target_user["_id"])
 
     return {"ok": True, "reminder_id": reminder_doc["_id"], "message": reminder_doc["message"]}
 
@@ -1644,7 +1659,13 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
 @api_router.get("/messages/contacts")
 async def get_contacts(cu=Depends(get_current_user)):
-    users = await db.users.find({"_id": {"$ne": cu["_id"]}}, {"password":0}).to_list(50)
+    # Patients only see staff (doctors, admins, radiologists)
+    # Staff see everyone
+    query = {"_id": {"$ne": cu["_id"]}}
+    if cu["role"] == "patient":
+        query["role"] = {"$in": ["doctor", "admin", "radiologist"]}
+
+    users = await db.users.find(query, {"password":0}).to_list(100)
     contacts = []
     for u in users:
         last = await db.messages.find_one(
