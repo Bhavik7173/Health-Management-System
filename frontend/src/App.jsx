@@ -90,7 +90,15 @@ function AppInner() {
       <Sidebar page={page} setPage={navigate} userRole={user.role} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden" }}>
         <TopNav />
-        <main style={{flex:1,overflow:"auto",padding:"24px 28px",background:"var(--bg)"}}>
+        <main style={{
+          flex:1,
+          overflow:"auto",
+          padding:"40px 48px",
+          background:"var(--bg)",
+          maxWidth: "1600px",
+          width: "100%",
+          margin: "0 auto"
+        }}>
           {page==="dashboard"    && <Dashboard       setPage={navigate}/>}
           {page==="patients"     && <PatientPage     />}
           {page==="appointments" && <AppointmentPage />}
