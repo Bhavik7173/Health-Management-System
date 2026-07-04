@@ -17,7 +17,15 @@ export default function ResourcePage() {
     import("../services/api").then(({ request }) => {
        request("/resources/wards").then(setWards);
     });
-    // ... rest of useEffect
+    resourceService.getForecast().then(data => {
+      setForecast((data || []).map(d => ({
+        date: d.date?.slice(5) || d.date,
+        admissions: d.predicted_admissions,
+        icu: d.icu_demand,
+        vents: d.ventilator_demand,
+      })));
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="page-enter">
