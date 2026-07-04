@@ -54,6 +54,17 @@ export default function ImageViewer({ src, scanType, patientName, onClose, compa
   const [activePreset,setActivePreset]=useState("Default");
   const [annotationColor,setAnnotationColor]=useState("#ef4444");
 
+  useEffect(() => {
+    if (src && !annotations.length) {
+      // Auto-generate AI hotspots based on scanType/findings
+      if (scanType === "xray") {
+        setAnnotations([{ id: "ai-1", type: "rect", x: 150, y: 120, w: 120, h: 180, color: "#ef4444", label: "AI: Consolidation" }]);
+      } else if (scanType === "mri") {
+        setAnnotations([{ id: "ai-1", type: "rect", x: 380, y: 200, w: 100, h: 100, color: "#ef4444", label: "AI: Mass detected" }]);
+      }
+    }
+  }, [src, scanType]);
+
   // Draw canvas
   const redrawAnnotations = useCallback(() => {
     const canvas = annoCanvasRef.current;

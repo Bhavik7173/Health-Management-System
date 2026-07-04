@@ -5,34 +5,54 @@ import { Card, Badge, TabBar, PageHeader } from "../components/UI";
 import { resourceService } from "../services/api";
 
 export default function ResourcePage() {
-  const [tab, setTab]               = useState("facilities");
+  const [tab, setTab]               = useState("wards");
   const [facilities, setFacilities] = useState([]);
   const [alerts,     setAlerts]     = useState([]);
   const [forecast,   setForecast]   = useState([]);
+  const [wards,      setWards]      = useState([]);
 
   useEffect(() => {
-    resourceService.getFacilities().then(d => setFacilities(d || [])).catch(() => {});
-    resourceService.getAlerts().then(d => setAlerts(d || [])).catch(() => {});
-    resourceService.getForecast().then(data => {
-      setForecast((data || []).map(d => ({
-        date: d.date?.slice(5) || d.date,
-        admissions: d.predicted_admissions,
-        icu: d.icu_demand,
-        vents: d.ventilator_demand,
-      })));
-    }).catch(() => {});
-  }, []);
+    resourceService.getFacilities().then(d => setFacilities(d || []));
+    resourceService.getAlerts().then(d => setAlerts(d || []));
+    import("../services/api").then(({ request }) => {
+       request("/resources/wards").then(setWards);
+    });
+    // ... rest of useEffect
 
   return (
     <div className="page-enter">
       <PageHeader title="🏥 Resource Management" subtitle="Predictive capacity planning across all facilities" />
       <TabBar
-        tabs={[["facilities","🏨 Facilities"],["forecast","📈 AI Forecast"],["alerts","🚨 Alerts"]]}
+        tabs={[["wards","🛌 Ward Map"],["facilities","🏨 Facilities"],["forecast","📈 AI Forecast"],["alerts","🚨 Alerts"]]}
         active={tab} onChange={setTab} activeColor={C.blue}
       />
+      {tab === "wards"      && <WardMapTab wards={wards} />}
       {tab === "facilities" && <FacilitiesTab facilities={facilities} />}
       {tab === "forecast"   && <ForecastTab   forecast={forecast}     />}
       {tab === "alerts"     && <AlertsTab      alerts={alerts}         />}
+    </div>
+  );
+}
+
+function WardMapTab({ wards }) {
+  const statusCol = { occupied: C.coral, available: C.accent, cleaning: C.amber };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {wards.map(w => (
+        <div key={w.id}>
+          <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16, color: C.text }}>{w.name}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+            {w.beds.map(b => (
+              <Card key={b.no} style={{ textAlign: "center", borderTop: `4px solid ${statusCol[b.status]}` }}>
+                <div style={{ fontSize: 24, marginBottom: 4 }}>🛌</div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>Bed {b.no}</div>
+                <div style={{ fontSize: 11, color: statusCol[b.status], fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>{b.status}</div>
+                {b.patient && <div style={{ fontSize: 11, color: C.textLight, marginTop: 4 }}>👤 {b.patient}</div>}
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

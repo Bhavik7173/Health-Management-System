@@ -2539,6 +2539,40 @@ async def delete_shift(sid: str, cu=Depends(get_current_user)):
     await db.shifts.delete_one({"_id": sid})
     return {"ok": True}
 
+@api_router.get("/portal/qr-code")
+async def get_patient_qr(cu=Depends(get_current_user)):
+    """Generates a secure Digital ID QR code for the patient"""
+    qr_data = f"MEDICORE_ID:{cu['_id']}"
+    img = qrcode.make(qr_data)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    return {"qr_code": f"data:image/png;base64,{qr_b64}", "patient_id": cu["_id"]}
+
+@api_router.get("/resources/wards")
+async def get_wards(cu=Depends(get_current_user)):
+    """Returns a visual map of hospital beds and their status"""
+    # Mock ward data for the visual map
+    wards = [
+        {"id": "icu", "name": "ICU Ward A", "beds": [
+            {"no": "101", "status": "occupied", "patient": "Sarah J."},
+            {"no": "102", "status": "occupied", "patient": "James L."},
+            {"no": "103", "status": "cleaning", "patient": None},
+            {"no": "104", "status": "available", "patient": None},
+            {"no": "105", "status": "available", "patient": None},
+            {"no": "106", "status": "occupied", "patient": "Maria G."},
+        ]},
+        {"id": "gen", "name": "General Ward B", "beds": [
+            {"no": "201", "status": "available", "patient": None},
+            {"no": "202", "status": "occupied", "patient": "Tom C."},
+            {"no": "203", "status": "available", "patient": None},
+            {"no": "204", "status": "cleaning", "patient": None},
+            {"no": "205", "status": "available", "patient": None},
+            {"no": "206", "status": "available", "patient": None},
+        ]}
+    ]
+    return wards
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Mount API router
 # ══════════════════════════════════════════════════════════════════════════════

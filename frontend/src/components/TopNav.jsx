@@ -53,32 +53,32 @@ export default function TopNav({ isPatient = false }) {
 
   return (
     <header style={{
-      height: 64, background: "var(--card)", borderBottom: `1px solid var(--border)`,
-      display: "flex", alignItems: "center", justifyContent: isPatient ? "space-between" : "flex-end", padding: "0 24px",
-      position: "sticky", top: 0, zIndex: 100,
+      height: 72, background: "var(--card)", borderBottom: `1px solid var(--border)`,
+      display: "flex", alignItems: "center", justifyContent: isPatient ? "space-between" : "flex-end", padding: "0 40px",
+      position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
     }}>
       {isPatient && (
-        <div style={{display:"flex", alignItems:"center", gap:10}}>
-          <span style={{fontSize:20}}>⚕️</span>
-          <span style={{fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:"var(--text)"}}>MediCore AI</span>
-          <span style={{fontSize:11, color:"var(--blue)", fontWeight:700, background:"var(--blue-light)", padding:"2px 10px", borderRadius:20}}>Patient Portal</span>
+        <div style={{display:"flex", alignItems:"center", gap:12}}>
+          <div style={{ width:36, height:36, borderRadius:10, background: "linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, color: "#fff" }}>⚕️</div>
+          <span style={{fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:800, color:"var(--text)", letterSpacing: "-0.01em"}}>MediCore AI</span>
+          <span style={{fontSize:10, color:"var(--blue)", fontWeight:800, background:"var(--blue-light)", padding:"4px 10px", borderRadius:20, letterSpacing: "0.05em", textTransform: "uppercase"}}>Patient Portal</span>
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <div style={{ position: "relative" }} ref={dropdownRef}>
-          {/* ... bell button ... */}
           <button onClick={() => setShowNotif(!showNotif)} style={{
-            background: "none", border: "none", fontSize: 20, cursor: "pointer", position: "relative",
-            width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "background 0.2s"
-          }} onMouseEnter={e => e.currentTarget.style.background = "var(--card-alt)"}
-             onMouseLeave={e => e.currentTarget.style.background = "none"}>
+            background: "var(--bg)", border: "none", fontSize: 18, cursor: "pointer", position: "relative",
+            width: 44, height: 44, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.2s"
+          }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+             onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
             🔔
             {unread > 0 && (
               <span style={{
-                position: "absolute", top: 8, right: 8, background: "var(--coral)", color: "#fff",
-                fontSize: 10, fontWeight: 700, padding: "2px 5px", borderRadius: 10, border: "2px solid var(--card)"
+                position: "absolute", top: -2, right: -2, background: "var(--coral)", color: "#fff",
+                fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, borderRadius: 9, border: "3px solid var(--card)",
+                display: "flex", alignItems: "center", justifyContent: "center"
               }}>
                 {unread}
               </span>

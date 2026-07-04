@@ -118,6 +118,18 @@ export default function PatientPortalPage() {
   const [apptForm,     setApptForm]     = useState({ doctor:"", date:"", time:"09:00", type:"Consultation", notes:"" });
   const [teleForm,     setTeleForm]     = useState({ doctor_name:"", type:"video", scheduled_at:"", duration_mins:30, notes:"" });
 
+  // ── Digital ID Card ──
+  const [qrCode, setQrCode] = useState(null);
+  const [showIdCard, setShowIdCard] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "patient") {
+       import("../services/api").then(({ request }) => {
+         request("/portal/qr-code").then(data => setQrCode(data.qr_code));
+       });
+    }
+  }, [user]);
+
   // ── Messaging State ──
   const [contacts, setContacts] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
@@ -317,11 +329,53 @@ export default function PatientPortalPage() {
             </div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
+            <Btn onClick={() => setShowIdCard(true)} variant="ghost" style={{ borderRadius:10, fontSize:12, padding:"9px 14px", border:`1.5px solid ${C.accent}44`, color:C.accent }}>🪪 My ID Card</Btn>
             <Btn onClick={() => setShowTele(true)} variant="secondary" style={{ borderRadius:10, fontSize:12, padding:"9px 14px" }}>📹 Telemedicine</Btn>
             <Btn onClick={() => setShowAppt(true)} style={{ borderRadius:10, fontSize:12, padding:"9px 14px" }}>📅 Book Appointment</Btn>
           </div>
         </div>
       </Card>
+
+      {/* ── Digital ID Card Modal ── */}
+      {showIdCard && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, backdropFilter:"blur(10px)" }} onClick={() => setShowIdCard(false)}>
+           <div style={{
+             width: 380, background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+             borderRadius: 32, padding: 32, position: "relative", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+             color: "#fff", cursor: "default"
+           }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.2em", opacity: 0.8 }}>MEDICORE AI</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>DIGITAL HEALTH ID</div>
+                </div>
+                <div style={{ fontSize: 24 }}>⚕️</div>
+              </div>
+
+              <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}>
+                <Avatar initials={firstName.slice(0,2).toUpperCase()} color="#fff" size={80} style={{ border: "4px solid rgba(255,255,255,0.2)" }} />
+                <div>
+                   <div style={{ fontSize: 18, fontWeight: 800 }}>{user?.name}</div>
+                   <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>ID: {user?.id?.slice(0,8).toUpperCase()}</div>
+                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", padding: "4px 8px", borderRadius: 6, fontWeight: 700 }}>BLOOD: {profile?.blood}</span>
+                      <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", padding: "4px 8px", borderRadius: 6, fontWeight: 700 }}>DOB: {profile?.dob}</span>
+                   </div>
+                </div>
+              </div>
+
+              <div style={{ background: "#fff", borderRadius: 20, padding: 16, display: "flex", justifyContent: "center" }}>
+                 {qrCode ? <img src={qrCode} alt="QR ID" style={{ width: 140, height: 140 }} /> : <div style={{ height: 140, display: "flex", alignItems: "center", color: C.textLight }}>Generating...</div>}
+              </div>
+
+              <div style={{ marginTop: 24, textAlign: "center", fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>
+                 Scan this code at clinical terminals for<br/>secure electronic health record access.
+              </div>
+
+              <button onClick={() => setShowIdCard(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", opacity: 0.6 }}>✕</button>
+           </div>
+        </div>
+      )}
 
       {/* ── modals (inline, above the tabs) ── */}
       {showAppt && (

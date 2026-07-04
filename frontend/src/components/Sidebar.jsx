@@ -134,24 +134,24 @@ export default function Sidebar({ page, setPage, userRole }) {
   return (
     <>
       <aside style={{
-        width: 220, background: S.bg, display:"flex", flexDirection:"column",
-        borderRight:`1px solid ${S.border}`, flexShrink:0, position:"sticky",
-        top:0, height:"100vh", overflowY:"auto",
+        width: 260, background: S.bg, display:"flex", flexDirection:"column",
+        borderRight:`1px solid var(--border)`, flexShrink:0, position:"sticky",
+        top:0, height:"100vh", overflowY:"auto", padding: "10px 0"
       }}>
         {/* Logo */}
-        <div style={{ padding:"22px 20px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:`1px solid ${S.border}` }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:S.active, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⚕️</div>
+        <div style={{ padding:"24px 28px", display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:40, height:40, borderRadius:12, background: "linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, color: "#fff", boxShadow: "0 8px 16px -4px rgba(79, 70, 229, 0.4)" }}>⚕️</div>
           <div>
-            <span style={{ fontWeight:800, fontSize:16, color:S.text }}>Medi</span>
-            <span style={{ fontWeight:800, fontSize:16, color:S.accent }}>Core</span>
+            <span style={{ fontWeight:800, fontSize:18, color:"var(--text)", letterSpacing: "-0.02em" }}>Medi</span>
+            <span style={{ fontWeight:800, fontSize:18, color:"var(--accent)", letterSpacing: "-0.02em" }}>Core</span>
           </div>
         </div>
 
         {/* Nav groups */}
-        <nav style={{ flex:1, padding:"12px 10px", overflowY:"auto" }}>
+        <nav style={{ flex:1, padding:"20px 16px", overflowY:"auto" }}>
           {groups.map(group => (
-            <div key={group.group} style={{ marginBottom:8 }}>
-              <div style={{ fontSize:10, fontWeight:700, color:S.textLight, letterSpacing:"0.06em", padding:"6px 10px 4px", textTransform:"uppercase" }}>
+            <div key={group.group} style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:"var(--text-light)", letterSpacing:"0.1em", padding:"0 12px 10px", textTransform:"uppercase", opacity: 0.6 }}>
                 {group.group}
               </div>
               {group.items.map(item => {
@@ -159,19 +159,18 @@ export default function Sidebar({ page, setPage, userRole }) {
                 return (
                   <button key={item.id+item.label} onClick={() => setPage(item.id)}
                     style={{
-                      width:"100%", display:"flex", alignItems:"center", gap:10,
-                      padding:"9px 12px", borderRadius:12, border:"none", cursor:"pointer",
-                      background: active ? S.active : "transparent",
-                      color: active ? S.activeText : S.text,
-                      fontSize:13, fontWeight: active ? 700 : 500,
-                      textAlign:"left", marginBottom:2, transition:"background 0.15s",
+                      width:"100%", display:"flex", alignItems:"center", gap:12,
+                      padding:"12px 16px", borderRadius:16, border:"none", cursor:"pointer",
+                      background: active ? "var(--accent-light)" : "transparent",
+                      color: active ? "var(--accent)" : "var(--text-med)",
+                      fontSize:14, fontWeight: active ? 700 : 600,
+                      textAlign:"left", marginBottom:4, transition:"all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
-                    onMouseEnter={e => { if(!active) e.currentTarget.style.background=S.border; }}
+                    onMouseEnter={e => { if(!active) e.currentTarget.style.background="var(--bg)"; }}
                     onMouseLeave={e => { if(!active) e.currentTarget.style.background="transparent"; }}>
-                    <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
+                    <span style={{ fontSize:18, width:24, textAlign:"center", opacity: active ? 1 : 0.7 }}>{item.icon}</span>
                     <span style={{ flex:1 }}>{item.label}</span>
-                    {item.expandable && <span style={{ fontSize:11, color:S.textLight }}>▾</span>}
-                    {active && <div style={{ width:3, height:16, borderRadius:2, background:S.accent, marginLeft:2 }}/>}
+                    {active && <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--accent)" }}/>}
                   </button>
                 );
               })}
